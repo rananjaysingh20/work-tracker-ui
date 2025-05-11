@@ -5,9 +5,7 @@ import {
   LayoutDashboard, 
   Users, 
   FolderKanban, 
-  Clock, 
-  CreditCard, 
-  Settings,
+  Clock,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -40,16 +38,6 @@ const Sidebar = () => {
       label: "Time Entries",
       icon: <Clock size={20} />,
       to: "/time-entries",
-    },
-    {
-      label: "Payments",
-      icon: <CreditCard size={20} />,
-      to: "/payments",
-    },
-    {
-      label: "Settings",
-      icon: <Settings size={20} />,
-      to: "/settings",
     },
   ];
 
