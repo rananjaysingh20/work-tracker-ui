@@ -1,125 +1,510 @@
-
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
+import { clients } from '../lib/api';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Link } from "react-router-dom";
-import { FolderKanban, Mail, Phone, Plus, Search, User } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Paperclip, Trash2, ArrowUpFromLine, Pencil } from "lucide-react";
 
 interface Client {
   id: string;
   name: string;
-  company: string;
   email: string;
   phone: string;
-  projects: number;
-  totalEarnings: string;
+  address: string;
+  company: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
 }
 
-const Clients = () => {
-  // Sample client data - would come from your data store
-  const clients: Client[] = [
-    {
-      id: "1",
-      name: "John Smith",
-      company: "Acme Inc",
-      email: "john@acme.com",
-      phone: "(555) 123-4567",
-      projects: 3,
-      totalEarnings: "$4,500",
+export function Clients() {
+  const queryClient = useQueryClient();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newClient, setNewClient] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    company: '',
+    notes: '',
+  });
+  const [fileInputs, setFileInputs] = useState<{ [clientId: string]: File | null }>({});
+  const [uploading, setUploading] = useState<{ [clientId: string]: boolean }>({});
+  const [deleting, setDeleting] = useState<{ [fileId: string]: boolean }>({});
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
+  const [clientDeleting, setClientDeleting] = useState<{ [clientId: string]: boolean }>({});
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; clientId: string | null }>({ open: false, clientId: null });
+  const [viewClient, setViewClient] = useState<Client | null>(null);
+
+  const { data: clientsData, isLoading } = useQuery({
+    queryKey: ['clients'],
+    queryFn: () => clients.getAll(),
+  });
+  
+  const safeClientsData = Array.isArray(clientsData) ? clientsData : [];
+
+  const fileQueries = useQueries({
+    queries: safeClientsData.map(client => ({
+      queryKey: ['clientFiles', client.id],
+      queryFn: () => clients.getFiles(client.id),
+      enabled: !!client.id,
+    })),
+  });
+
+  const createClient = useMutation({
+    mutationFn: (data: any) => clients.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setIsCreateModalOpen(false);
+      setNewClient({
+        name: '',
+        email: '',
+        phone: '',
+        address: '',
+        company: '',
+        notes: '',
+      });
     },
-    {
-      id: "2",
-      name: "Sarah Johnson",
-      company: "TechCo",
-      email: "sarah@techco.com",
-      phone: "(555) 987-6543",
-      projects: 2,
-      totalEarnings: "$3,200",
-    },
-    {
-      id: "3",
-      name: "Michael Brown",
-      company: "StartupX",
-      email: "michael@startupx.com",
-      phone: "(555) 456-7890",
-      projects: 1,
-      totalEarnings: "$1,800",
-    },
-    {
-      id: "4",
-      name: "Emily Davis",
-      company: "Design Studio",
-      email: "emily@designstudio.com",
-      phone: "(555) 789-0123",
-      projects: 2,
-      totalEarnings: "$2,700",
-    },
-  ];
+  });
+
+  const handleCreateClient = (e: React.FormEvent) => {
+    e.preventDefault();
+    createClient.mutate(newClient);
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setNewClient((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleFileChange = (clientId: string, file: File | null) => {
+    setFileInputs((prev) => ({ ...prev, [clientId]: file }));
+  };
+
+  const handleFileUpload = async (clientId: string) => {
+    const file = fileInputs[clientId];
+    if (!file) return;
+    setUploading((prev) => ({ ...prev, [clientId]: true }));
+    try {
+      await clients.uploadFile(clientId, file);
+      queryClient.invalidateQueries({ queryKey: ['clientFiles', clientId] });
+      setFileInputs((prev) => ({ ...prev, [clientId]: null }));
+    } finally {
+      setUploading((prev) => ({ ...prev, [clientId]: false }));
+    }
+  };
+
+  const handleFileDelete = async (clientId: string, fileId: string) => {
+    setDeleting((prev) => ({ ...prev, [fileId]: true }));
+    try {
+      await clients.deleteFile(clientId, fileId);
+      queryClient.invalidateQueries({ queryKey: ['clientFiles', clientId] });
+    } finally {
+      setDeleting((prev) => ({ ...prev, [fileId]: false }));
+    }
+  };
+
+  const openConfirmDelete = (clientId: string) => {
+    setConfirmDelete({ open: true, clientId });
+  };
+
+  const closeConfirmDelete = () => {
+    setConfirmDelete({ open: false, clientId: null });
+  };
+
+  const confirmDeleteClient = async () => {
+    if (confirmDelete.clientId) {
+      await handleClientDelete(confirmDelete.clientId);
+    }
+    closeConfirmDelete();
+  };
+
+  const handleEditClick = (client: Client) => {
+    setEditingClient(client);
+    setNewClient({
+      name: client.name,
+      email: client.email,
+      phone: client.phone,
+      address: client.address,
+      company: client.company,
+      notes: client.notes,
+    });
+    setIsEditMode(true);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateClick = () => {
+    setEditingClient(null);
+    setNewClient({
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      company: '',
+      notes: '',
+    });
+    setIsEditMode(false);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleModalClose = () => {
+    setIsCreateModalOpen(false);
+    setEditingClient(null);
+    setIsEditMode(false);
+    setNewClient({
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      company: '',
+      notes: '',
+    });
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isEditMode && editingClient) {
+      setUpdateLoading(true);
+      await clients.update(editingClient.id, newClient);
+      setUpdateLoading(false);
+    } else {
+      createClient.mutate(newClient);
+    }
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+    handleModalClose();
+  };
+
+  const handleClientDelete = async (clientId: string) => {
+    setClientDeleting((prev) => ({ ...prev, [clientId]: true }));
+    try {
+      await clients.delete(clientId);
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    } catch (err: any) {
+      setDeleteError(err?.response?.data?.detail || 'Failed to delete client');
+    } finally {
+      setClientDeleting((prev) => ({ ...prev, [clientId]: false }));
+    }
+  };
+
+  // Helper to format ISO date strings
+  const formatDate = (iso: string) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Clients</h1>
-        <Link to="/clients/new">
-          <Button className="bg-brand-blue hover:bg-brand-blue/90 flex items-center gap-2">
-            <Plus size={16} />
+    <div>
+      <div className="sm:flex sm:items-center">
+        <div className="sm:flex-auto">
+          <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
+          <p className="mt-2 text-sm text-gray-700">
+            A list of all clients including their name, email, and company.
+          </p>
+        </div>
+        <div className="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+          <Button onClick={handleCreateClick}>
+            <Plus className="mr-2 h-4 w-4" />
             Add Client
           </Button>
-        </Link>
-      </div>
-
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-          <Input
-            placeholder="Search clients..."
-            className="pl-10"
-          />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {clients.map((client) => (
-          <Link key={client.id} to={`/clients/${client.id}`}>
-            <Card className="hover:border-brand-blue/20 hover:shadow-md transition-all duration-200">
-              <CardContent className="p-5">
-                <div className="flex flex-col space-y-4">
-                  <div className="flex justify-between items-start">
+      {/* Clients List */}
+      <div className="mt-8 flex flex-col">
+        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
+            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                      Name
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Company
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Email
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Phone
+                    </th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                      Files
+                    </th>
+                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {safeClientsData.map((client: Client, idx: number) => (
+                    <tr key={client.id}>
+                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                        <button
+                          type="button"
+                          className="hover:underline text-left"
+                          onClick={() => setViewClient(client)}
+                          title="View client details"
+                        >
+                          {client.name}
+                        </button>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {client.company}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {client.email}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                        {client.phone}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 min-w-[220px]">
+                        <ul className="space-y-1">
+                          {fileQueries[idx]?.data?.map((file: any) => (
+                            <li key={file.id} className="flex items-center gap-2 group">
+                              <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate max-w-[120px]">
+                                {file.file_name}
+                              </a>
+                              <button
+                                className="text-gray-400 hover:text-red-600 transition-colors"
+                                onClick={() => handleFileDelete(client.id, file.id)}
+                                disabled={deleting[file.id]}
+                                title="Delete file"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6 flex items-center gap-2">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="file"
+                            className="hidden"
+                            onChange={e => handleFileChange(client.id, e.target.files?.[0] || null)}
+                            disabled={uploading[client.id]}
+                          />
+                          <Paperclip className="w-5 h-5 text-gray-500 hover:text-blue-600 transition-colors" />
+                        </label>
+                        {fileInputs[client.id] && !uploading[client.id] && (
+                          <span className="ml-2 max-w-[120px] truncate text-gray-700 text-xs font-medium" title={fileInputs[client.id]?.name}>
+                            {fileInputs[client.id]?.name}
+                          </span>
+                        )}
+                        {fileInputs[client.id] && !uploading[client.id] && (
+                          <button
+                            onClick={() => handleFileUpload(client.id)}
+                            className="ml-1 text-blue-600 hover:text-blue-800 transition-colors"
+                            title="Upload file"
+                          >
+                            <ArrowUpFromLine className="w-5 h-5" />
+                          </button>
+                        )}
+                        {uploading[client.id] && (
+                          <span className="ml-1 text-gray-400 text-xs">Uploading...</span>
+                        )}
+                        <button
+                          type="button"
+                          className="ml-2 text-gray-500 hover:text-indigo-600 transition-colors"
+                          onClick={() => handleEditClick(client)}
+                          title="Edit client"
+                        >
+                          <Pencil className="w-5 h-5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="ml-2 text-gray-500 hover:text-red-600 transition-colors"
+                          onClick={() => openConfirmDelete(client.id)}
+                          title="Delete client"
+                          disabled={clientDeleting[client.id]}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Create Client Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={handleModalClose}
+            />
+
+            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
+              <form onSubmit={handleFormSubmit}>
+                <div>
+                  <h3 className="text-lg font-medium leading-6 text-gray-900">{isEditMode ? 'Edit Client' : 'Create New Client'}</h3>
+                  <div className="mt-4 space-y-4">
                     <div>
-                      <h3 className="font-semibold text-lg">{client.name}</h3>
-                      <p className="text-gray-500 text-sm">{client.company}</p>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                        Name
+                      </label>
+                      <Input
+                        type="text"
+                        name="name"
+                        id="name"
+                        required
+                        value={newClient.name}
+                        onChange={handleInputChange}
+                      />
                     </div>
-                    <div className="p-2 bg-brand-light text-brand-blue rounded-full">
-                      <User size={20} />
+                    <div>
+                      <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+                        Company
+                      </label>
+                      <Input
+                        type="text"
+                        name="company"
+                        id="company"
+                        value={newClient.company}
+                        onChange={handleInputChange}
+                      />
                     </div>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                        Email
+                      </label>
+                      <Input
+                        type="email"
+                        name="email"
+                        id="email"
+                        required
+                        value={newClient.email}
+                        onChange={handleInputChange}
+                      />
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail size={14} className="text-gray-400" />
-                      <span>{client.email}</span>
+                    <div>
+                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                        Phone
+                      </label>
+                      <Input
+                        type="tel"
+                        name="phone"
+                        id="phone"
+                        value={newClient.phone}
+                        onChange={handleInputChange}
+                      />
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone size={14} className="text-gray-400" />
-                      <span>{client.phone}</span>
+                    <div>
+                      <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                        Address
+                      </label>
+                      <Textarea
+                        name="address"
+                        id="address"
+                        rows={2}
+                        value={newClient.address}
+                        onChange={handleInputChange}
+                      />
                     </div>
-                  </div>
-
-                  <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
-                    <div className="flex items-center gap-1 text-sm">
-                      <FolderKanban size={14} className="text-gray-400" />
-                      <span>{client.projects} Projects</span>
+                    <div>
+                      <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                        Notes
+                      </label>
+                      <Textarea
+                        name="notes"
+                        id="notes"
+                        rows={3}
+                        value={newClient.notes}
+                        onChange={handleInputChange}
+                      />
                     </div>
-                    <span className="font-semibold text-brand-blue">{client.totalEarnings}</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+                <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                  <Button type="submit" className="sm:col-start-2" disabled={updateLoading}>
+                    {isEditMode ? (updateLoading ? 'Saving...' : 'Save Changes') : 'Create'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-3 sm:col-start-1 sm:mt-0"
+                    onClick={handleModalClose}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal for Delete */}
+      {deleteError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+            <h2 className="text-lg font-semibold mb-2">Delete Client Failed</h2>
+            <p className="mb-4 text-sm text-gray-700">{deleteError}</p>
+            <Button onClick={() => setDeleteError(null)} className="w-full">OK</Button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Delete Modal */}
+      {confirmDelete.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+            <h2 className="text-lg font-semibold mb-2">Delete Client</h2>
+            <p className="mb-4 text-sm text-gray-700">Are you sure you want to delete this client?</p>
+            <div className="flex gap-2">
+              <Button onClick={confirmDeleteClient} className="w-full" variant="destructive">Delete</Button>
+              <Button onClick={closeConfirmDelete} className="w-full" variant="outline">Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Client Modal */}
+      {viewClient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+            <h2 className="text-xl font-semibold mb-4">Client Details</h2>
+            <div className="space-y-2 text-sm text-gray-700">
+              <div><span className="font-semibold">Name:</span> {viewClient.name}</div>
+              <div><span className="font-semibold">Company:</span> {viewClient.company}</div>
+              <div><span className="font-semibold">Email:</span> {viewClient.email}</div>
+              <div><span className="font-semibold">Phone:</span> {viewClient.phone}</div>
+              <div><span className="font-semibold">Address:</span> {viewClient.address}</div>
+              <div><span className="font-semibold">Notes:</span> {viewClient.notes}</div>
+              <div><span className="font-semibold">Created At:</span> {formatDate(viewClient.created_at)}</div>
+              <div><span className="font-semibold">Updated At:</span> {formatDate(viewClient.updated_at)}</div>
+            </div>
+            <Button onClick={() => setViewClient(null)} className="mt-6 w-full">Close</Button>
+          </div>
       </div>
+      )}
     </div>
   );
-};
-
-export default Clients;
+}

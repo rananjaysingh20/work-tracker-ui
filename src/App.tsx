@@ -1,41 +1,121 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './lib/auth';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { DashboardLayout } from './layouts/DashboardLayout';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Dashboard } from './pages/Dashboard';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Projects } from './pages/Projects';
+import { Tasks } from './pages/Tasks';
+import { TimeEntries } from './pages/TimeEntries';
+import { Clients } from './pages/Clients';
+import { Team } from './pages/Team';
+import ClientReports from './pages/ClientReports';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Clients from "./pages/Clients";
-import Projects from "./pages/Projects";
-import TimeEntries from "./pages/TimeEntries";
-import NotFound from "./pages/NotFound";
-import DashboardLayout from "./layouts/DashboardLayout";
-
+// Create a client
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/time-entries" element={<TimeEntries />} />
-            {/* Add these routes as needed later */}
-            {/* <Route path="/payments" element={<Payments />} /> */}
-            {/* <Route path="/settings" element={<Settings />} /> */}
-            {/* <Route path="/clients/:id" element={<ClientDetails />} /> */}
-            {/* <Route path="/projects/:id" element={<ProjectDetails />} /> */}
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <AuthProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/unauthorized" element={<div>Unauthorized</div>} />
+
+            {/* Protected routes */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Dashboard />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Projects />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Tasks />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/time-entries"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <TimeEntries />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/clients"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Clients />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/team"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <Team />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <ClientReports />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <div>Settings Page</div>
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch all route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </Router>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

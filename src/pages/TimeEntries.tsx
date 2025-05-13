@@ -1,248 +1,576 @@
-
-import { useState } from "react";
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { timeEntries, tasks, projects } from '../lib/api';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { Link } from "react-router-dom";
-import { Calendar, Clock, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { format } from "date-fns";
+import { Clock, Plus, Pencil, Trash2, Upload, Paperclip, Check } from "lucide-react";
+import { useAuth } from '../lib/auth';
+import { timeEntryFiles } from '../lib/api';
 
 interface TimeEntry {
   id: string;
-  date: string;
-  project: string;
-  client: string;
+  task_id: string;
+  user_id: string;
+  duration: number;
   description: string;
-  hours: number;
-  billable: boolean;
+  date: string;
+  created_at: string;
+  updated_at: string;
+  start_time?: string;
+  end_time?: string;
 }
 
-const TimeEntries = () => {
-  // Sample time entry data - would come from your data store
-  const timeEntries: TimeEntry[] = [
-    {
-      id: "1",
-      date: "May 10, 2025",
-      project: "Website Redesign",
-      client: "Acme Inc",
-      description: "Homepage layout implementation",
-      hours: 2.5,
-      billable: true
-    },
-    {
-      id: "2",
-      date: "May 10, 2025",
-      project: "Mobile App Development",
-      client: "TechCo",
-      description: "API integration",
-      hours: 3.0,
-      billable: true
-    },
-    {
-      id: "3",
-      date: "May 9, 2025",
-      project: "Website Redesign",
-      client: "Acme Inc",
-      description: "Client meeting and feedback",
-      hours: 1.0,
-      billable: true
-    },
-    {
-      id: "4",
-      date: "May 9, 2025",
-      project: "Brand Identity",
-      client: "StartupX",
-      description: "Logo concepts",
-      hours: 2.5,
-      billable: true
-    },
-    {
-      id: "5",
-      date: "May 8, 2025",
-      project: "Mobile App Development",
-      client: "TechCo",
-      description: "UI design review",
-      hours: 1.5,
-      billable: false
-    },
-    {
-      id: "6",
-      date: "May 8, 2025",
-      project: "Website Redesign",
-      client: "Acme Inc",
-      description: "Responsive testing",
-      hours: 1.5,
-      billable: true
-    },
-  ];
+export function TimeEntries() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+  const [newTimeEntry, setNewTimeEntry] = useState({
+    description: '',
+    startDate: new Date().toISOString().split('T')[0],
+    startTime: '09:00',
+    endDate: new Date().toISOString().split('T')[0],
+    endTime: '17:00',
+    duration: 8,
+  });
+  const [editEntry, setEditEntry] = useState<TimeEntry | null>(null);
+  const [deleteEntry, setDeleteEntry] = useState<TimeEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [fileInputs, setFileInputs] = useState<{ [key: string]: File | null }>({});
+  const [uploading, setUploading] = useState<{ [key: string]: boolean }>({});
+  const [uploadError, setUploadError] = useState<{ entryId: string, message: string } | null>(null);
 
-  const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
+  const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => projects.getAll(),
+  });
 
-  const toggleSelectEntry = (id: string) => {
-    if (selectedEntries.includes(id)) {
-      setSelectedEntries(selectedEntries.filter(entryId => entryId !== id));
+  const { data: tasksData, isLoading: isLoadingTasks } = useQuery({
+    queryKey: ['tasks', selectedProjectId],
+    queryFn: () => tasks.getAll(selectedProjectId),
+    enabled: !!selectedProjectId,
+  });
+
+  const { data: timeEntriesData, isLoading: isLoadingTimeEntries } = useQuery({
+    queryKey: ['timeEntries', selectedTaskId],
+    queryFn: () => timeEntries.getAll(selectedTaskId),
+    enabled: !!selectedTaskId,
+  });
+
+  const { data: timeEntryFilesData = {}, refetch: refetchFiles } = useQuery({
+    queryKey: ["timeEntryFiles", selectedTaskId],
+    queryFn: async () => {
+      if (!tasksData) return {};
+      const filesByEntry: { [key: string]: any[] } = {};
+      await Promise.all(
+        tasksData.flatMap((task: any) =>
+          (timeEntriesData || []).map(async (entry: any) => {
+            const files = await timeEntryFiles.list(entry.id);
+            filesByEntry[entry.id] = files;
+          })
+        )
+      );
+      return filesByEntry;
+    },
+    enabled: !!selectedTaskId && !!timeEntriesData,
+  });
+
+  const createTimeEntry = useMutation({
+    mutationFn: (data: any) => timeEntries.create(selectedTaskId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+      setIsCreateModalOpen(false);
+      setNewTimeEntry({
+        description: '',
+        startDate: new Date().toISOString().split('T')[0],
+        startTime: '09:00',
+        endDate: new Date().toISOString().split('T')[0],
+        endTime: '17:00',
+        duration: 8,
+      });
+    },
+  });
+
+  // Update mutation for editing a time entry
+  const updateTimeEntry = useMutation({
+    mutationFn: (data: any) => timeEntries.update(editEntry?.id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+      setIsCreateModalOpen(false);
+      setEditEntry(null);
+      setNewTimeEntry({
+        description: '',
+        startDate: new Date().toISOString().split('T')[0],
+        startTime: '09:00',
+        endDate: new Date().toISOString().split('T')[0],
+        endTime: '17:00',
+        duration: 8,
+      });
+    },
+  });
+
+  const deleteTimeEntry = useMutation({
+    mutationFn: (entryId: string) => timeEntries.delete(entryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeEntries'] });
+      setDeleteEntry(null);
+      setDeleteError(null);
+    },
+    onError: (error: any) => {
+      setDeleteError(error.response?.data?.detail || error.message || 'Failed to delete time entry.');
+    },
+  });
+
+  // Helper to calculate duration in hours (decimal)
+  const calculateDuration = (startDate: string, startTime: string, endDate: string, endTime: string) => {
+    const start = new Date(`${startDate}T${startTime}`);
+    const end = new Date(`${endDate}T${endTime}`);
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs <= 0) return 0;
+    return diffMs / (1000 * 60 * 60); // hours
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setNewTimeEntry((prev) => {
+      const updated = { ...prev, [name]: value };
+      if (["startDate", "startTime", "endDate", "endTime"].includes(name)) {
+        updated.duration = calculateDuration(
+          updated.startDate,
+          updated.startTime,
+          updated.endDate,
+          updated.endTime
+        );
+      }
+      return updated;
+    });
+  };
+
+  const handleCreateOrEditTimeEntry = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) {
+      console.error('No user ID available');
+      return;
+    }
+    const timeEntryData = {
+      description: newTimeEntry.description,
+      date: newTimeEntry.startDate,
+      duration: newTimeEntry.duration,
+      start_time: `${newTimeEntry.startDate}T${newTimeEntry.startTime}`,
+      end_time: `${newTimeEntry.endDate}T${newTimeEntry.endTime}`,
+      task_id: selectedTaskId,
+      user_id: user.id,
+    };
+    if (editEntry) {
+      updateTimeEntry.mutate(timeEntryData);
     } else {
-      setSelectedEntries([...selectedEntries, id]);
+      createTimeEntry.mutate(timeEntryData);
     }
   };
 
-  const toggleSelectAll = () => {
-    if (selectedEntries.length === timeEntries.length) {
-      setSelectedEntries([]);
-    } else {
-      setSelectedEntries(timeEntries.map(entry => entry.id));
+  const handleProjectChange = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setSelectedTaskId('');
+  };
+
+  const handleTaskChange = (taskId: string) => {
+    setSelectedTaskId(taskId);
+  };
+
+  const openEditModal = (entry: TimeEntry) => {
+    setEditEntry(entry);
+    setNewTimeEntry({
+      description: entry.description,
+      startDate: entry.start_time ? entry.start_time.split('T')[0] : entry.date,
+      startTime: entry.start_time ? entry.start_time.split('T')[1]?.slice(0,5) : '09:00',
+      endDate: entry.end_time ? entry.end_time.split('T')[0] : entry.date,
+      endTime: entry.end_time ? entry.end_time.split('T')[1]?.slice(0,5) : '17:00',
+      duration: entry.duration,
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteEntry) return;
+    setIsDeleting(true);
+    deleteTimeEntry.mutate(deleteEntry.id, {
+      onSettled: () => setIsDeleting(false),
+    });
+  };
+
+  const handleDeleteClick = (entry: TimeEntry) => {
+    setDeleteEntry(entry);
+    setDeleteError(null);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setDeleteEntry(null);
+    setDeleteError(null);
+  };
+
+  const handleFileChange = (entryId: string, file: File | null) => {
+    setFileInputs((prev) => ({ ...prev, [entryId]: file }));
+  };
+
+  const handleFileUpload = async (entryId: string) => {
+    const file = fileInputs[entryId];
+    if (!file) return;
+    setUploading((prev) => ({ ...prev, [entryId]: true }));
+    try {
+      await timeEntryFiles.upload(entryId, file);
+      setFileInputs((prev) => ({ ...prev, [entryId]: null }));
+      refetchFiles();
+    } catch (err: any) {
+      setUploadError({
+        entryId,
+        message: err?.response?.data?.detail || err?.message || "Failed to upload file.",
+      });
+    } finally {
+      setUploading((prev) => ({ ...prev, [entryId]: false }));
     }
   };
 
-  // Calculate total hours
-  const totalHours = timeEntries.reduce((total, entry) => total + entry.hours, 0);
-  const selectedHours = timeEntries
-    .filter(entry => selectedEntries.includes(entry.id))
-    .reduce((total, entry) => total + entry.hours, 0);
+  const handleFileDelete = async (entryId: string, fileId: string) => {
+    await timeEntryFiles.delete(entryId, fileId);
+    refetchFiles();
+  };
+
+  if (isLoadingProjects) {
+    return <div className="p-8 text-center">Loading projects...</div>;
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Time Entries</h1>
-        <Link to="/time-entries/new">
-          <Button className="bg-brand-blue hover:bg-brand-blue/90 flex items-center gap-2">
+        <Button 
+          onClick={() => setIsCreateModalOpen(true)}
+          disabled={!selectedTaskId}
+          className="bg-brand-blue hover:bg-brand-blue/90 flex items-center gap-2"
+        >
             <Plus size={16} />
-            New Entry
+          New Time Entry
           </Button>
-        </Link>
       </div>
 
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-          <Input
-            placeholder="Search time entries..."
-            className="pl-10"
-          />
-        </div>
-
-        <div className="flex gap-4">
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Project" />
+      {/* Project and Task Selection */}
+      <div className="mb-6 flex gap-4">
+        <div className="flex flex-col">
+          <label htmlFor="project-select" className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+          <Select value={selectedProjectId} onValueChange={handleProjectChange}>
+            <SelectTrigger id="project-select" className="w-[300px]">
+              <SelectValue placeholder="Select a project" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Projects</SelectItem>
-              <SelectItem value="1">Website Redesign</SelectItem>
-              <SelectItem value="2">Mobile App Development</SelectItem>
-              <SelectItem value="3">Brand Identity</SelectItem>
+              {projectsData?.map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  {project.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-
-          <Button variant="outline" className="flex items-center gap-2">
-            <Calendar size={16} />
-            This Week
-          </Button>
         </div>
+
+        {selectedProjectId && (
+          <div className="flex flex-col">
+            <label htmlFor="task-select" className="block text-sm font-medium text-gray-700 mb-1">Task</label>
+            <Select value={selectedTaskId} onValueChange={handleTaskChange}>
+              <SelectTrigger id="task-select" className="w-[300px]">
+                <SelectValue placeholder="Select a task" />
+              </SelectTrigger>
+              <SelectContent>
+                {tasksData?.map((task) => (
+                  <SelectItem key={task.id} value={task.id}>
+                    {task.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
-      <div className="bg-white rounded-lg border">
-        <div className="p-4 border-b flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Clock className="text-brand-blue" />
-            <h2 className="font-semibold">
-              {selectedEntries.length > 0 ? (
-                <span>{selectedEntries.length} entries selected ({selectedHours.toFixed(1)} hours)</span>
-              ) : (
-                <span>All time entries ({totalHours.toFixed(1)} hours)</span>
-              )}
-            </h2>
+      {/* Time Entries List */}
+      {selectedTaskId ? (
+        isLoadingTimeEntries ? (
+          <div className="p-8 text-center">Loading time entries...</div>
+        ) : timeEntriesData?.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            No time entries found for this task. Create your first time entry to get started.
           </div>
-
-          {selectedEntries.length > 0 && (
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" className="flex items-center gap-1">
-                <Pencil size={14} />
-                Edit
-              </Button>
-              <Button variant="outline" size="sm" className="flex items-center gap-1 border-red-200 text-red-600 hover:bg-red-50">
-                <Trash2 size={14} />
-                Delete
-              </Button>
+        ) : (
+          <div className="bg-white rounded-lg border overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (hours)</th>
+                  <th className="relative px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Files</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {timeEntriesData?.map((entry: TimeEntry) => (
+                  <tr key={entry.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {entry.start_time
+                        ? new Date(entry.start_time).toLocaleDateString()
+                        : (entry.date ? new Date(entry.date).toLocaleDateString() : '')}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {entry.description}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {entry.duration.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2 justify-end items-center">
+                      {/* File upload icon and input */}
+          <div className="flex items-center gap-2">
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={e => handleFileChange(entry.id, e.target.files?.[0] || null)}
+                            disabled={uploading[entry.id]}
+                          />
+                          <Paperclip size={16} className="text-blue-600 hover:text-blue-800" />
+                        </label>
+                        {fileInputs[entry.id] && (
+                          <>
+                            <span className="text-xs text-gray-700 max-w-[120px] truncate inline-block align-middle">{fileInputs[entry.id]?.name}</span>
+                            <button
+                              type="button"
+                              className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-gray-100 inline-flex"
+                              onClick={() => handleFileUpload(entry.id)}
+                              disabled={uploading[entry.id]}
+                            >
+                              {uploading[entry.id] ? <Upload size={16} className="animate-spin" /> : <Upload size={16} />}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-gray-100 inline-flex"
+                        onClick={() => openEditModal(entry)}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-gray-100 inline-flex"
+                        onClick={() => handleDeleteClick(entry)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <ul className="space-y-1">
+                        {(timeEntryFilesData[entry.id] || []).map((file: any) => {
+                          const fileUrl = file.file_url;
+                          return (
+                            <li key={file.id} className="flex items-center gap-2">
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                                {file.file_name}
+                              </a>
+                              <button
+                                className="text-red-600 hover:text-red-800"
+                                onClick={() => handleFileDelete(entry.id, file.id)}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : (
+        <div className="p-8 text-center text-gray-500">
+          Please select a project and task to view time entries
             </div>
           )}
-        </div>
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40px]">
-                  <Input 
-                    type="checkbox" 
-                    className="w-4 h-4"
-                    checked={selectedEntries.length === timeEntries.length && timeEntries.length > 0}
-                    onChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="w-[200px]">Project</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead className="w-[250px]">Description</TableHead>
-                <TableHead>Hours</TableHead>
-                <TableHead>Billable</TableHead>
-                <TableHead className="w-[80px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {timeEntries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell>
-                    <Input 
-                      type="checkbox" 
-                      className="w-4 h-4" 
-                      checked={selectedEntries.includes(entry.id)}
-                      onChange={() => toggleSelectEntry(entry.id)}
-                    />
-                  </TableCell>
-                  <TableCell>{entry.date}</TableCell>
-                  <TableCell>{entry.project}</TableCell>
-                  <TableCell>{entry.client}</TableCell>
-                  <TableCell className="max-w-[250px] truncate">{entry.description}</TableCell>
-                  <TableCell>{entry.hours.toFixed(1)}</TableCell>
-                  <TableCell>
-                    {entry.billable ? (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Yes</span>
-                    ) : (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">No</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Pencil size={14} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600">
-                        <Trash2 size={14} />
-                      </Button>
+      {/* Create/Edit Time Entry Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={() => { setIsCreateModalOpen(false); setEditEntry(null); }}
+            />
+            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
+              <form onSubmit={handleCreateOrEditTimeEntry}>
+                <div>
+                  <h3 className="text-lg font-medium leading-6 text-gray-900">{editEntry ? 'Edit Time Entry' : 'Create New Time Entry'}</h3>
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                        Description
+                      </label>
+                      <Textarea
+                        name="description"
+                        id="description"
+                        rows={3}
+                        value={newTimeEntry.description}
+                        onChange={handleInputChange}
+                      />
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    <div className="flex gap-2">
+                      <div>
+                        <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Start Date</label>
+                        <Input
+                          type="date"
+                          name="startDate"
+                          id="startDate"
+                          required
+                          value={newTimeEntry.startDate}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="startTime" className="block text-sm font-medium text-gray-700">Start Time</label>
+                        <Input
+                          type="time"
+                          name="startTime"
+                          id="startTime"
+                          required
+                          value={newTimeEntry.startTime}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div>
+                        <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">End Date</label>
+                        <Input
+                          type="date"
+                          name="endDate"
+                          id="endDate"
+                          required
+                          value={newTimeEntry.endDate}
+                          onChange={handleInputChange}
+                        />
+        </div>
+                      <div>
+                        <label htmlFor="endTime" className="block text-sm font-medium text-gray-700">End Time</label>
+                  <Input 
+                          type="time"
+                          name="endTime"
+                          id="endTime"
+                          required
+                          value={newTimeEntry.endTime}
+                          onChange={handleInputChange}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Duration (hours)</label>
+                    <Input 
+                        type="number"
+                        name="duration"
+                        id="duration"
+                        step="0.01"
+                        min="0"
+                        value={newTimeEntry.duration}
+                        readOnly
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                  <button
+                    type="submit"
+                    className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm"
+                  >
+                    {editEntry ? 'Save Changes' : 'Create'}
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-1 sm:mt-0 sm:text-sm"
+                    onClick={() => { setIsCreateModalOpen(false); setEditEntry(null); }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Time Entry Modal */}
+      {deleteEntry && (
+        <div className="fixed inset-0 z-20 overflow-y-auto">
+          <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={handleCloseDeleteModal}
+            />
+            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
+              <div>
+                <h3 className="text-lg font-medium leading-6 text-gray-900">Delete Time Entry</h3>
+                <div className="mt-2 text-gray-700">
+                  Are you sure you want to delete this time entry? This action cannot be undone.
+                </div>
+                {deleteError && (
+                  <div className="mt-4 text-red-600 text-sm border border-red-200 rounded p-2 bg-red-50">
+                    {deleteError}
+                  </div>
+                )}
+              </div>
+              <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+                <button
+                  type="button"
+                  className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-1 sm:mt-0 sm:text-sm"
+                  onClick={handleCloseDeleteModal}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm"
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
         </div>
       </div>
+      )}
+
+      {/* Upload Error Modal */}
+      {uploadError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+            <h2 className="text-lg font-semibold mb-2 text-red-700">File Upload Error</h2>
+            <div className="mb-4 text-gray-800">{uploadError.message}</div>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              onClick={() => setUploadError(null)}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default TimeEntries;
+}
