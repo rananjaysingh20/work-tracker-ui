@@ -1,8 +1,21 @@
-# Welcome to your Lovable project
+# Project Pay Pilot
 
-## Project info
+A modern web application for tracking and managing payments.
 
-**URL**: https://lovable.dev/projects/d222934e-2701-4612-869d-e255dfaf37e3
+**URL**: https://project-pay-pilot.example.com
+
+## Development
+
+### Local Development
+
+You can clone this repo and work locally using your own IDE. Any pushed changes will be automatically deployed.
+
+### Getting Started
+
+1. Clone the repository
+2. Install dependencies with `npm install`
+3. Run the development server with `npm run dev`
+4. Open [http://localhost:5173](http://localhost:5173) in your browser
 
 ## How can I edit this code?
 
@@ -60,14 +73,17 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Deployment
 
-Simply open [Lovable](https://lovable.dev/projects/d222934e-2701-4612-869d-e255dfaf37e3) and click on Share -> Publish.
+The project can be deployed using any modern hosting platform that supports static sites.
 
-## Can I connect a custom domain to my Lovable project?
+## Custom Domain Setup
 
-Yes, you can!
+You can connect a custom domain to your project by following these steps:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+1. Purchase a domain from your preferred registrar
+2. Configure DNS settings
+3. Add SSL certificate
+4. Update deployment settings
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+For detailed instructions, refer to your hosting provider's documentation.
