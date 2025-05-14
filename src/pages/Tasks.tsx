@@ -129,10 +129,19 @@ export function Tasks() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setNewTask((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    
+    // For date inputs, append default time to make it a valid ISO datetime
+    if (name === 'due_date' && value) {
+      setNewTask((prev) => ({
+        ...prev,
+        [name]: `${value}T00:00:00`,
+      }));
+    } else {
+      setNewTask((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleStatusChange = (taskId: string, newStatus: string) => {
