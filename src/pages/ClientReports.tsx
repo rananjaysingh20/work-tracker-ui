@@ -67,17 +67,12 @@ export default function ClientReports() {
                                     <li key={te.id} className="mt-2">
                                       <div className="space-y-1">
                                         <div>
-                                          <span className="font-medium">Time:</span>{' '}
-                                          {te.start_time ? new Date(te.start_time).toLocaleTimeString() : 'N/A'} -{' '}
-                                          {te.end_time ? new Date(te.end_time).toLocaleTimeString() : 'N/A'}
+                                          <span className="font-medium">Description:</span>{' '}
+                                          {te.description || 'No description'}
                                         </div>
                                         <div>
                                           <span className="font-medium">Duration:</span>{' '}
                                           {te.duration.toFixed(2)} hours
-                                        </div>
-                                        <div>
-                                          <span className="font-medium">Description:</span>{' '}
-                                          {te.description || 'No description'}
                                         </div>
                                         {te.time_entry_files && te.time_entry_files.length > 0 && (
                                           <div>
@@ -114,6 +109,7 @@ export default function ClientReports() {
               <div className="mt-4">
                 {selectedReport.client_files && selectedReport.client_files.length > 0 && (
                   <div className="mb-2">
+                    <div><b>Total Time:</b> { (selectedReport.projects || []).flatMap(p => p.tasks?.flatMap(t => t.time_entries || []) || []).reduce((sum, e) => sum + (e.duration || 0), 0)} hours</div>
                     <span className="font-semibold">Client Files:</span>
                     <ul className="ml-4 list-disc">
                       {selectedReport.client_files.map((file: any) => {

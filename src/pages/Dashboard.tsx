@@ -3,13 +3,26 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { projects, tasks, timeEntries } from '../lib/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import CountUp from '@/components/CountUp';
+import DecryptedText from '@/components/DecryptedText';
+import RecentActivity from '@/components/RecentActivity';
 
 export function Dashboard() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
-  const { data: projectsData } = useQuery({
+  const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useQuery({
     queryKey: ['projects'],
-    queryFn: () => projects.getAll(),
+    queryFn: async () => {
+      console.log("Dashboard - Fetching projects...");
+      try {
+        const data = await projects.getAll();
+        console.log("Dashboard - Projects API response:", data);
+        return data;
+      } catch (error) {
+        console.error("Dashboard - Error fetching projects:", error);
+        throw error;
+      }
+    },
   });
 
   const { data: tasksData } = useQuery({
@@ -64,23 +77,13 @@ export function Dashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-
-      {/* Project Selection */}
-      <div className="mt-4">
-        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-          <SelectTrigger className="w-[300px]">
-            <SelectValue placeholder="Select a project" />
-          </SelectTrigger>
-          <SelectContent>
-            {projectsData?.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <h1 className="text-2xl font-semibold text-gray-900">
+        <DecryptedText
+          text="Dashboard"
+          animateOn="view"
+          revealDirection="center"
+        />
+      </h1>
 
       {/* Stats */}
       <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -94,10 +97,27 @@ export function Dashboard() {
               <div className="absolute rounded-md bg-indigo-500 p-3">
                 <div className="h-6 w-6 text-white">{stat.icon}</div>
               </div>
-              <p className="ml-16 truncate text-sm font-medium text-gray-500">{stat.name}</p>
+              <p className="ml-16 truncate text-sm font-medium text-gray-500">
+                <DecryptedText
+                  text={stat.name}
+                  animateOn="view"
+                  revealDirection="center"
+                />
+              </p>
             </dt>
             <dd className="ml-16 flex items-baseline">
-              <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                <CountUp
+                  from={0}
+                  to={stat.value}
+                  separator=","
+                  direction="up"
+                  duration={1}
+                  className="count-up-text"
+                  onStart={() => {}}
+                  onEnd={() => {}}
+                />
+              </p>
             </dd>
           </Link>
         ))}
@@ -106,52 +126,12 @@ export function Dashboard() {
       {/* Recent Activity */}
       <div className="mt-8">
         <h2 className="text-lg font-medium text-gray-900">Recent Activity</h2>
-        <div className="mt-4 overflow-hidden rounded-lg bg-white shadow">
-          <div className="p-6">
-            <div className="flow-root">
-              <ul role="list" className="-mb-8">
-                {timeEntriesData?.slice(0, 5).map((entry: any, index: number) => (
-                  <li key={entry.id}>
-                    <div className="relative pb-8">
-                      {index !== timeEntriesData.length - 1 && (
-                        <span
-                          className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <div className="relative flex space-x-3">
-                        <div>
-                          <span className="h-8 w-8 rounded-full bg-indigo-500 flex items-center justify-center ring-8 ring-white">
-                            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                          <div>
-                            <p className="text-sm text-gray-500">
-                              Logged {entry.duration} hours on{' '}
-                              <span className="font-medium text-gray-900">{entry.task_name}</span>
-                            </p>
-                          </div>
-                          <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                            <time dateTime={entry.created_at}>
-                              {new Date(entry.created_at).toLocaleDateString()}
-                            </time>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+        <div className="mt-4">
+          <RecentActivity 
+            projects={projectsData || []} 
+            isLoading={projectsLoading}
+            error={projectsError as Error | null}
+          />
         </div>
       </div>
     </div>
