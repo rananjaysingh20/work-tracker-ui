@@ -125,7 +125,7 @@ export function Dashboard() {
 
       {/* Recent Activity */}
       <div className="mt-8">
-        <h2 className="text-lg font-medium text-gray-900">Recent Activity</h2>
+        <h2 className="text-lg font-medium text-gray-900">Timeline Tracking</h2>
         <div className="mt-4">
           <RecentActivity 
             projects={projectsData || []} 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import DecryptedText from '@/components/DecryptedText';
+import Iridescence from '@/components/BackgroundAnimation';
 
 interface NavItem {
   name: string;
@@ -103,155 +104,167 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   }, [showMenu]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Mobile sidebar */}
-      <div
-        className={`fixed inset-0 z-40 flex md:hidden ${
-          sidebarOpen ? 'visible' : 'invisible'
-        }`}
-      >
-        <div
-          className={`fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity ${
-            sidebarOpen ? 'opacity-100' : 'opacity-0'
-          }`}
-          onClick={() => setSidebarOpen(false)}
+    <div className="min-h-screen bg-gray-100 relative">
+      <div className="absolute inset-0 z-0">
+        <Iridescence
+          color={[1, 1, 1]}
+          mouseReact={false}
+          amplitude={0.1}
+          speed={1.0}
         />
-
+      </div>
+      <div className="relative z-10">
+        {/* Mobile sidebar */}
         <div
-          className={`relative flex w-full max-w-xs flex-1 flex-col bg-white transition-transform ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          className={`fixed inset-0 z-40 flex md:hidden ${
+            sidebarOpen ? 'visible' : 'invisible'
           }`}
         >
-          <div className="flex h-16 items-center justify-between px-4">
-            <div className="text-xl font-semibold">Work Vault</div>
+          <div
+            className={`fixed inset-0 bg-gray-600 bg-opacity-75 transition-opacity ${
+              sidebarOpen ? 'opacity-100' : 'opacity-0'
+            }`}
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          <div
+            className={`relative flex w-full max-w-xs flex-1 flex-col bg-white/50 backdrop-blur-sm transition-transform ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200/50">
+              <div className="text-xl font-semibold text-gray-800">Work Vault</div>
+              <button
+                type="button"
+                className="text-gray-500 hover:text-gray-600"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <span className="sr-only">Close sidebar</span>
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <nav className="flex-1 space-y-1 px-2 py-4">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                    location.pathname === item.path
+                      ? 'bg-gray-100 text-gray-900'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <div
+                    className={`mr-3 h-6 w-6 ${
+                      location.pathname === item.path ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
+                    }`}
+                  >
+                    {item.icon}
+                  </div>
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+
+        {/* Static sidebar for desktop */}
+        <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
+          <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200/50 bg-white/50 backdrop-blur-sm">
+            <div className="flex h-16 items-center px-4 border-b border-gray-200/50">
+              <div className="text-xl font-semibold text-gray-800">
+                <DecryptedText
+                      text="Work Vault"
+                      animateOn="view"
+                      revealDirection="center"
+                    />
+              </div>
+            </div>
+            <nav className="flex-1 space-y-1 px-2 py-4">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.path}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                    location.pathname === item.path
+                      ? 'bg-gray-900/10 text-gray-900'
+                      : 'text-gray-600 hover:bg-gray-900/5 hover:text-gray-900'
+                  }`}
+                >
+                  <div
+                    className={`mr-3 h-6 w-6 ${
+                      location.pathname === item.path ? 'text-gray-700' : 'text-gray-400 group-hover:text-gray-600'
+                    }`}
+                  >
+                    {item.icon}
+                  </div>
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+            <div className="flex items-center justify-center border-t border-gray-200/50">
+              <div className="h-10 text-gray-600">Support the <a href="https://rananjaysingh20.github.io/" target="_blank" className="text-brand-blue hover:text-brand-blue/80 transition-colors">developer</a></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="flex flex-1 flex-col md:pl-64">
+          <div className="sticky top-0 z-10 bg-white/50 backdrop-blur-sm pl-1 pt-1 sm:pl-3 sm:pt-3 md:hidden">
             <button
               type="button"
-              className="text-gray-500 hover:text-gray-600"
-              onClick={() => setSidebarOpen(false)}
+              className="-ml-0.5 -mt-0.5 inline-flex h-12 w-12 items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+              onClick={() => setSidebarOpen(true)}
             >
-              <span className="sr-only">Close sidebar</span>
+              <span className="sr-only">Open sidebar</span>
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
           </div>
 
-          <nav className="flex-1 space-y-1 px-2 py-4">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                  location.pathname === item.path
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <div
-                  className={`mr-3 h-6 w-6 ${
-                    location.pathname === item.path ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
-                  }`}
-                >
-                  {item.icon}
-                </div>
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </div>
-
-      {/* Static sidebar for desktop */}
-      <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
-        <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200 bg-white">
-          <div className="flex h-16 items-center px-4">
-            <div className="text-xl font-semibold">
-              <DecryptedText
-                    text="Work Vault"
-                    animateOn="view"
-                    revealDirection="center"
-                  />
-            </div>
-          </div>
-          <nav className="flex-1 space-y-1 px-2 py-4">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                  location.pathname === item.path
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <div
-                  className={`mr-3 h-6 w-6 ${
-                    location.pathname === item.path ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
-                  }`}
-                >
-                  {item.icon}
-                </div>
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-          <div className="flex items-center justify-center">
-            <div className="h-10 text-gray-500">Support the <a href="https://rananjaysingh20.github.io/" target="_blank" className="text-brand-blue">developer</a></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="flex flex-1 flex-col md:pl-64">
-        <div className="sticky top-0 z-10 bg-white pl-1 pt-1 sm:pl-3 sm:pt-3 md:hidden">
-          <button
-            type="button"
-            className="-ml-0.5 -mt-0.5 inline-flex h-12 w-12 items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-
-        <main className="flex-1">
-          <div className="py-6">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8">
-              {/* User profile dropdown */}
-              <div className="flex justify-end mb-4">
-                <div className="relative" ref={menuRef}>
-                  <button
-                    type="button"
-                    className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    onClick={() => setShowMenu((v) => !v)}
-                  >
-                    <span className="sr-only">Open user menu</span>
-                    <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                      {getInitials(user?.full_name)}
-                    </div>
-                  </button>
-                  {showMenu && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                      <div className="py-1">
-                        <button
-                          onClick={handleLogout}
-                          className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Sign out
-                        </button>
+          <main className="flex-1 overflow-hidden">
+            <div className="py-6">
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 min-w-0">
+                {/* User profile dropdown */}
+                <div className="flex justify-end mb-4">
+                  <div className="relative" ref={menuRef}>
+                    <button
+                      type="button"
+                      className="flex items-center text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      onClick={() => setShowMenu((v) => !v)}
+                    >
+                      <span className="sr-only">Open user menu</span>
+                      <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        {getInitials(user?.full_name)}
                       </div>
-                    </div>
-                  )}
+                    </button>
+                    {showMenu && (
+                      <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                        <div className="py-1">
+                          <button
+                            onClick={handleLogout}
+                            className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Sign out
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Page content wrapper */}
+                <div className="overflow-x-auto">
+                  {children}
                 </div>
               </div>
-
-              {/* Page content */}
-              {children}
             </div>
-          </div>
-      </main>
+          </main>
+        </div>
       </div>
     </div>
   );

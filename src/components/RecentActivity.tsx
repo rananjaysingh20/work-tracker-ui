@@ -109,18 +109,16 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
     if (!tasks?.length) return [];
 
     const projectStart = project.start_date ? parseISO(project.start_date) : parseISO(project.created_at);
-    const projectEnd = project.end_date ? parseISO(project.end_date) : addDays(new Date(), 30);
-    
-    // Calculate the total duration in days
-    const totalDays = differenceInDays(projectEnd, projectStart) + 1;
     
     return tasks.map(task => {
       const taskStart = parseISO(task.created_at);
-      const taskEnd = task.due_date ? parseISO(task.due_date) : addDays(taskStart, 7);
+      const taskEnd = parseISO(task.due_date);
       
-      // Calculate the start position as percentage from project start
-      const startOffset = Math.max(0, differenceInDays(taskStart, projectStart));
-      const duration = differenceInDays(taskEnd, taskStart) + 1;
+      // Calculate days from project start (day 1) to task dates
+      const startOffset = Math.max(0, differenceInDays(taskStart, projectStart) + 1);
+      // Calculate duration from task start to task end
+      const endOffset = Math.max(0, differenceInDays(taskEnd, projectStart) + 1);
+      const duration = endOffset - startOffset + 1;
       
       return {
         name: task.title,
@@ -185,9 +183,9 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
   return (
     <Card className="border-none shadow-md bg-white/50 backdrop-blur-sm">
       <CardHeader className="pb-2 border-b">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <CardTitle className="text-lg font-semibold text-gray-800">Project Timeline</CardTitle>
-          <div className="w-[250px]">
+          <div className="w-full sm:w-[250px]">
             <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
               <SelectTrigger className="bg-white border-gray-200 hover:border-gray-300 transition-colors">
                 <SelectValue placeholder="Select a project" />
@@ -203,14 +201,19 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
-        <div className="h-[300px] w-full">
+      <CardContent className="pt-6">
+        <div className="h-[400px] w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={coloredGanttData}
               layout="vertical"
-              barSize={24}
-              margin={{ top: 20, right: 30, left: 120, bottom: 5 }}
+              barSize={28}
+              margin={{ 
+                top: 10, 
+                right: 10, 
+                left: 10, 
+                bottom: 10 
+              }}
               className="font-sans"
             >
               <CartesianGrid 
@@ -226,12 +229,25 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
                 tick={{ fill: '#6b7280', fontSize: 12 }}
                 axisLine={{ stroke: '#e5e7eb' }}
                 tickLine={{ stroke: '#e5e7eb' }}
+                padding={{ left: 0, right: 10 }}
               />
               <YAxis
                 type="category"
                 dataKey="name"
-                width={120}
-                tick={{ fill: '#374151', fontSize: 13, fontWeight: 500 }}
+                width={100}
+                tick={{ 
+                  fill: '#374151', 
+                  fontSize: 13, 
+                  fontWeight: 500,
+                  textAnchor: 'end'
+                }}
+                tickFormatter={(value) => {
+                  // Wrap long text to multiple lines
+                  if (value.length > 20) {
+                    return value.slice(0, 20) + '...';
+                  }
+                  return value;
+                }}
                 axisLine={false}
                 tickLine={false}
               />
@@ -247,18 +263,16 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
                 formatter={(value: any, name: string, props: any) => {
                   if (name === 'duration') {
                     const startDay = props.payload.start;
-                    const endDay = props.payload.start + value - 1;
+                    const endDay = startDay + value - 1;
                     return [
                       <div className="flex flex-col gap-1">
-                        <span className="font-medium text-gray-900">{props.payload.name}</span>
                         <span className="text-sm text-gray-500">
                           Day {startDay} - Day {endDay} ({value} days)
                         </span>
                         <span className="text-sm font-medium" style={{ color: props.payload.fill }}>
                           {props.payload.status.toUpperCase()}
                         </span>
-                      </div>,
-                      ''
+                      </div>
                     ];
                   }
                   return [value, name];
@@ -272,7 +286,7 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
                 fillOpacity={0.9}
               />
               <ReferenceLine 
-                x={differenceInDays(new Date(), parseISO(selectedProject.start_date))} 
+                x={differenceInDays(new Date(), parseISO(selectedProject.start_date)) + 1}
                 stroke="#ef4444"
                 strokeWidth={2}
                 strokeDasharray="4 4"
