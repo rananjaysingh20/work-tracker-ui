@@ -25,7 +25,11 @@ interface Project {
   end_date: string;
 }
 
-export function Projects() {
+interface ProjectsProps {
+  isDark?: boolean;
+}
+
+export function Projects({ isDark = false }: ProjectsProps) {
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({
@@ -142,66 +146,72 @@ export function Projects() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className={`p-6 max-w-7xl mx-auto ${isDark ? 'text-white' : ''}`}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
+        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>Projects</h1>
         <Button 
           onClick={handleCreateClick}
           className="bg-brand-blue hover:bg-brand-blue/90 flex items-center gap-2"
         >
-            <Plus size={16} />
-            New Project
-          </Button>
+          <Plus size={16} />
+          New Project
+        </Button>
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} size={18} />
           <Input
             placeholder="Search projects..."
-            className="pl-10"
+            className={`pl-10 ${isDark ? 'bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-500' : ''}`}
           />
         </div>
 
         <div className="flex gap-4">
           <Select defaultValue="all">
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className={`w-[160px] ${isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}`}>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="paused">Paused</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
+            <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+              <SelectItem value="all" className={isDark ? 'text-white hover:bg-gray-700' : ''}>All Statuses</SelectItem>
+              <SelectItem value="active" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Active</SelectItem>
+              <SelectItem value="paused" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Paused</SelectItem>
+              <SelectItem value="completed" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Completed</SelectItem>
             </SelectContent>
           </Select>
 
           <Select defaultValue="all">
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className={`w-[160px] ${isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}`}>
               <SelectValue placeholder="Client" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
-              <SelectItem value="1">Acme Inc</SelectItem>
-              <SelectItem value="2">TechCo</SelectItem>
-              <SelectItem value="3">StartupX</SelectItem>
-              <SelectItem value="4">Shop Co</SelectItem>
+            <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+              <SelectItem value="all" className={isDark ? 'text-white hover:bg-gray-700' : ''}>All Clients</SelectItem>
+              {clientsData?.map((client) => (
+                <SelectItem 
+                  key={client.id} 
+                  value={client.id}
+                  className={isDark ? 'text-white hover:bg-gray-700' : ''}
+                >
+                  {client.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border">
-        <div className="p-4 border-b">
+      <div className={`${isDark ? 'bg-gray-900/40 backdrop-blur-sm' : 'bg-white'} rounded-lg border ${isDark ? 'border-gray-700' : ''}`}>
+        <div className={`p-4 border-b ${isDark ? 'border-gray-700' : ''}`}>
           <div className="flex items-center gap-2">
             <FolderKanban className="text-brand-blue" />
-            <h2 className="font-semibold">{projectsData?.length} Projects</h2>
+            <h2 className={`font-semibold ${isDark ? 'text-white' : ''}`}>{projectsData?.length} Projects</h2>
           </div>
         </div>
         <ProjectList 
           projects={projectsData} 
           onEdit={handleEditClick} 
           onDelete={deleteProject.mutateAsync}
+          isDark={isDark}
         />
       </div>
 
@@ -214,13 +224,15 @@ export function Projects() {
               onClick={handleModalClose}
             />
 
-            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
+            <div className={`inline-block transform overflow-hidden rounded-lg ${isDark ? 'bg-gray-900/90 backdrop-blur-sm' : 'bg-white'} px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle`}>
               <form onSubmit={handleFormSubmit}>
                 <div>
-                  <h3 className="text-lg font-medium leading-6 text-gray-900">{isEditMode ? 'Edit Project' : 'Create New Project'}</h3>
+                  <h3 className={`text-lg font-medium leading-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {isEditMode ? 'Edit Project' : 'Create New Project'}
+                  </h3>
                   <div className="mt-4 space-y-4">
                     <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="name" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Project Name
                       </label>
                       <Input
@@ -230,10 +242,11 @@ export function Projects() {
                         required
                         value={newProject.name}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="description" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Description
                       </label>
                       <Textarea
@@ -242,10 +255,11 @@ export function Projects() {
                         rows={3}
                         value={newProject.description}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="client_id" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="client_id" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Client
                       </label>
                       <Select
@@ -257,12 +271,16 @@ export function Projects() {
                         }}
                         required
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}>
                           <SelectValue placeholder="Select a client" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
                           {clientsData?.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
+                            <SelectItem 
+                              key={client.id} 
+                              value={client.id}
+                              className={isDark ? 'text-white hover:bg-gray-700' : ''}
+                            >
                               {client.name}
                             </SelectItem>
                           ))}
@@ -273,7 +291,7 @@ export function Projects() {
                       )}
                     </div>
                     <div>
-                      <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="status" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Status
                       </label>
                       <Select
@@ -281,18 +299,18 @@ export function Projects() {
                         value={newProject.status}
                         onValueChange={(value) => setNewProject(prev => ({ ...prev, status: value }))}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="paused">Paused</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
+                        <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+                          <SelectItem value="active" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Active</SelectItem>
+                          <SelectItem value="paused" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Paused</SelectItem>
+                          <SelectItem value="completed" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Completed</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="start_date" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Start Date
                       </label>
                       <Input
@@ -302,10 +320,11 @@ export function Projects() {
                         required
                         value={newProject.start_date}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="end_date" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         End Date
                       </label>
                       <Input
@@ -314,6 +333,7 @@ export function Projects() {
                         id="end_date"
                         value={newProject.end_date}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                   </div>
@@ -325,7 +345,7 @@ export function Projects() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="mt-3 sm:col-start-1 sm:mt-0"
+                    className={`mt-3 sm:col-start-1 sm:mt-0 ${isDark ? 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700' : ''}`}
                     onClick={handleModalClose}
                   >
                     Cancel

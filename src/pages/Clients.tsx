@@ -18,7 +18,11 @@ interface Client {
   updated_at: string;
 }
 
-export function Clients() {
+interface ClientsProps {
+  isDark?: boolean;
+}
+
+export function Clients({ isDark = false }: ClientsProps) {
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newClient, setNewClient] = useState({
@@ -209,15 +213,15 @@ export function Clients() {
   };
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className={`p-8 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>Loading...</div>;
   }
 
   return (
-    <div>
+    <div className={isDark ? 'text-white' : ''}>
       <div className="sm:flex sm:items-center">
         <div className="sm:flex-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
-          <p className="mt-2 text-sm text-gray-700">
+          <h1 className={`text-2xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>Clients</h1>
+          <p className={`mt-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             A list of all clients including their name, email, and company.
           </p>
         </div>
@@ -233,23 +237,23 @@ export function Clients() {
       <div className="mt-8 flex flex-col">
         <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
           <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+            <div className={`overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg ${isDark ? 'bg-gray-900/40 backdrop-blur-sm' : 'bg-white'}`}>
               <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
+                <thead className={isDark ? 'bg-gray-800/50' : 'bg-gray-50'}>
                   <tr>
-                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+                    <th scope="col" className={`py-3.5 pl-4 pr-3 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-900'} sm:pl-6`}>
                       Name
                     </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                       Company
                     </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                       Email
                     </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                       Phone
                     </th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                    <th scope="col" className={`px-3 py-3.5 text-left text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
                       Files
                     </th>
                     <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
@@ -257,10 +261,10 @@ export function Clients() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className={`divide-y ${isDark ? 'divide-gray-700 bg-transparent' : 'divide-gray-200 bg-white'}`}>
                   {safeClientsData.map((client: Client, idx: number) => (
-                    <tr key={client.id}>
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                    <tr key={client.id} className={isDark ? 'hover:bg-gray-800/50' : ''}>
+                      <td className={`whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'} sm:pl-6`}>
                         <button
                           type="button"
                           className="hover:underline text-left"
@@ -270,24 +274,24 @@ export function Clients() {
                           {client.name}
                         </button>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                         {client.company}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                         {client.email}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                      <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                         {client.phone}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 min-w-[220px]">
+                      <td className={`whitespace-nowrap px-3 py-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'} min-w-[220px]`}>
                         <ul className="space-y-1">
                           {fileQueries[idx]?.data?.map((file: any) => (
                             <li key={file.id} className="flex items-center gap-2 group">
-                              <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate max-w-[120px]">
+                              <a href={file.file_url} target="_blank" rel="noopener noreferrer" className={`hover:underline truncate max-w-[120px] ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
                                 {file.file_name}
                               </a>
                               <button
-                                className="text-gray-400 hover:text-red-600 transition-colors"
+                                className={`transition-colors ${isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-600'}`}
                                 onClick={() => handleFileDelete(client.id, file.id)}
                                 disabled={deleting[file.id]}
                                 title="Delete file"
@@ -306,28 +310,28 @@ export function Clients() {
                             onChange={e => handleFileChange(client.id, e.target.files?.[0] || null)}
                             disabled={uploading[client.id]}
                           />
-                          <Paperclip className="w-5 h-5 text-gray-500 hover:text-blue-600 transition-colors" />
+                          <Paperclip className={`w-5 h-5 transition-colors ${isDark ? 'text-gray-400 hover:text-blue-400' : 'text-gray-500 hover:text-blue-600'}`} />
                         </label>
                         {fileInputs[client.id] && !uploading[client.id] && (
-                          <span className="ml-2 max-w-[120px] truncate text-gray-700 text-xs font-medium" title={fileInputs[client.id]?.name}>
+                          <span className={`ml-2 max-w-[120px] truncate text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`} title={fileInputs[client.id]?.name}>
                             {fileInputs[client.id]?.name}
                           </span>
                         )}
                         {fileInputs[client.id] && !uploading[client.id] && (
                           <button
                             onClick={() => handleFileUpload(client.id)}
-                            className="ml-1 text-blue-600 hover:text-blue-800 transition-colors"
+                            className={`ml-1 transition-colors ${isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'}`}
                             title="Upload file"
                           >
                             <ArrowUpFromLine className="w-5 h-5" />
                           </button>
                         )}
                         {uploading[client.id] && (
-                          <span className="ml-1 text-gray-400 text-xs">Uploading...</span>
+                          <span className={`ml-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>Uploading...</span>
                         )}
                         <button
                           type="button"
-                          className="ml-2 text-gray-500 hover:text-indigo-600 transition-colors"
+                          className={`ml-2 transition-colors ${isDark ? 'text-gray-400 hover:text-indigo-400' : 'text-gray-500 hover:text-indigo-600'}`}
                           onClick={() => handleEditClick(client)}
                           title="Edit client"
                         >
@@ -335,7 +339,7 @@ export function Clients() {
                         </button>
                         <button
                           type="button"
-                          className="ml-2 text-gray-500 hover:text-red-600 transition-colors"
+                          className={`ml-2 transition-colors ${isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-500 hover:text-red-600'}`}
                           onClick={() => openConfirmDelete(client.id)}
                           title="Delete client"
                           disabled={clientDeleting[client.id]}
@@ -361,13 +365,15 @@ export function Clients() {
               onClick={handleModalClose}
             />
 
-            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
+            <div className={`inline-block transform overflow-hidden rounded-lg ${isDark ? 'bg-gray-900/90 backdrop-blur-sm' : 'bg-white'} px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle`}>
               <form onSubmit={handleFormSubmit}>
                 <div>
-                  <h3 className="text-lg font-medium leading-6 text-gray-900">{isEditMode ? 'Edit Client' : 'Create New Client'}</h3>
+                  <h3 className={`text-lg font-medium leading-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {isEditMode ? 'Edit Client' : 'Create New Client'}
+                  </h3>
                   <div className="mt-4 space-y-4">
                     <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="name" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Name
                       </label>
                       <Input
@@ -377,10 +383,11 @@ export function Clients() {
                         required
                         value={newClient.name}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="company" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Company
                       </label>
                       <Input
@@ -389,10 +396,11 @@ export function Clients() {
                         id="company"
                         value={newClient.company}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="email" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Email
                       </label>
                       <Input
@@ -402,10 +410,11 @@ export function Clients() {
                         required
                         value={newClient.email}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
-                  </div>
+                    </div>
                     <div>
-                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="phone" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Phone
                       </label>
                       <Input
@@ -414,10 +423,11 @@ export function Clients() {
                         id="phone"
                         value={newClient.phone}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="address" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Address
                       </label>
                       <Textarea
@@ -426,10 +436,11 @@ export function Clients() {
                         rows={2}
                         value={newClient.address}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="notes" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Notes
                       </label>
                       <Textarea
@@ -438,6 +449,7 @@ export function Clients() {
                         rows={3}
                         value={newClient.notes}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                   </div>
@@ -449,7 +461,7 @@ export function Clients() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="mt-3 sm:col-start-1 sm:mt-0"
+                    className={`mt-3 sm:col-start-1 sm:mt-0 ${isDark ? 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700' : ''}`}
                     onClick={handleModalClose}
                   >
                     Cancel
@@ -464,9 +476,9 @@ export function Clients() {
       {/* Error Modal for Delete */}
       {deleteError && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
-            <h2 className="text-lg font-semibold mb-2">Delete Client Failed</h2>
-            <p className="mb-4 text-sm text-gray-700">{deleteError}</p>
+          <div className={`rounded-lg shadow-lg p-6 max-w-sm w-full ${isDark ? 'bg-gray-900 text-white' : 'bg-white'}`}>
+            <h2 className={`text-lg font-semibold mb-2 ${isDark ? 'text-red-400' : 'text-red-700'}`}>Delete Client Failed</h2>
+            <p className={`mb-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{deleteError}</p>
             <Button onClick={() => setDeleteError(null)} className="w-full">OK</Button>
           </div>
         </div>
@@ -475,12 +487,18 @@ export function Clients() {
       {/* Confirm Delete Modal */}
       {confirmDelete.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
-            <h2 className="text-lg font-semibold mb-2">Delete Client</h2>
-            <p className="mb-4 text-sm text-gray-700">Are you sure you want to delete this client?</p>
+          <div className={`rounded-lg shadow-lg p-6 max-w-sm w-full ${isDark ? 'bg-gray-900 text-white' : 'bg-white'}`}>
+            <h2 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : ''}`}>Delete Client</h2>
+            <p className={`mb-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Are you sure you want to delete this client?</p>
             <div className="flex gap-2">
               <Button onClick={confirmDeleteClient} className="w-full" variant="destructive">Delete</Button>
-              <Button onClick={closeConfirmDelete} className="w-full" variant="outline">Cancel</Button>
+              <Button 
+                onClick={closeConfirmDelete} 
+                className={`w-full ${isDark ? 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700' : ''}`} 
+                variant="outline"
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </div>
@@ -489,9 +507,9 @@ export function Clients() {
       {/* View Client Modal */}
       {viewClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-semibold mb-4">Client Details</h2>
-            <div className="space-y-2 text-sm text-gray-700">
+          <div className={`rounded-lg shadow-lg p-6 max-w-md w-full ${isDark ? 'bg-gray-900 text-white' : 'bg-white'}`}>
+            <h2 className={`text-xl font-semibold mb-4 ${isDark ? 'text-white' : ''}`}>Client Details</h2>
+            <div className={`space-y-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
               <div><span className="font-semibold">Name:</span> {viewClient.name}</div>
               <div><span className="font-semibold">Company:</span> {viewClient.company}</div>
               <div><span className="font-semibold">Email:</span> {viewClient.email}</div>
@@ -501,9 +519,14 @@ export function Clients() {
               <div><span className="font-semibold">Created At:</span> {formatDate(viewClient.created_at)}</div>
               <div><span className="font-semibold">Updated At:</span> {formatDate(viewClient.updated_at)}</div>
             </div>
-            <Button onClick={() => setViewClient(null)} className="mt-6 w-full">Close</Button>
+            <Button 
+              onClick={() => setViewClient(null)} 
+              className={`mt-6 w-full ${isDark ? 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700' : ''}`}
+            >
+              Close
+            </Button>
           </div>
-      </div>
+        </div>
       )}
     </div>
   );

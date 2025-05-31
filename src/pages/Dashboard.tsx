@@ -7,7 +7,11 @@ import CountUp from '@/components/CountUp';
 import DecryptedText from '@/components/DecryptedText';
 import RecentActivity from '@/components/RecentActivity';
 
-export function Dashboard() {
+interface DashboardProps {
+  isDark?: boolean;
+}
+
+export function Dashboard({ isDark = false }: DashboardProps) {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
   const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useQuery({
@@ -77,7 +81,7 @@ export function Dashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-900">
+      <h1 className={`text-2xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
         <DecryptedText
           text="Dashboard"
           animateOn="view"
@@ -91,13 +95,17 @@ export function Dashboard() {
           <Link
             key={stat.name}
             to={stat.link}
-            className="relative overflow-hidden rounded-lg bg-white px-4 py-5 shadow hover:shadow-md transition-shadow"
+            className={`relative overflow-hidden rounded-lg px-4 py-5 shadow hover:shadow-md transition-shadow ${
+              isDark 
+                ? 'bg-gray-900/40 backdrop-blur-sm hover:bg-gray-900/50' 
+                : 'bg-white hover:bg-white/90'
+            }`}
           >
             <dt>
               <div className="absolute rounded-md bg-indigo-500 p-3">
                 <div className="h-6 w-6 text-white">{stat.icon}</div>
               </div>
-              <p className="ml-16 truncate text-sm font-medium text-gray-500">
+              <p className={`ml-16 truncate text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                 <DecryptedText
                   text={stat.name}
                   animateOn="view"
@@ -106,7 +114,7 @@ export function Dashboard() {
               </p>
             </dt>
             <dd className="ml-16 flex items-baseline">
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className={`text-2xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 <CountUp
                   from={0}
                   to={stat.value}
@@ -125,12 +133,15 @@ export function Dashboard() {
 
       {/* Recent Activity */}
       <div className="mt-8">
-        <h2 className="text-lg font-medium text-gray-900">Timeline Tracking</h2>
+        <h2 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          Timeline Tracking
+        </h2>
         <div className="mt-4">
           <RecentActivity 
             projects={projectsData || []} 
             isLoading={projectsLoading}
             error={projectsError as Error | null}
+            isDark={isDark}
           />
         </div>
       </div>

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Calendar as CalendarIcon, Plus, Search, Pencil, Trash2, CheckSquare } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 
@@ -14,24 +14,45 @@ interface Task {
   id: string;
   title: string;
   description: string;
-  status: string;
-  priority: string;
   project_id: string;
-  assigned_to: string | null;
-  due_date: string | null;
-  created_at: string;
-  updated_at: string;
+  status: 'todo' | 'in_progress' | 'completed';
+  priority: 'low' | 'medium' | 'high';
+  due_date: string;
 }
 
-export function Tasks() {
+const statusColors = {
+  todo: 'bg-gray-100 text-gray-800',
+  in_progress: 'bg-blue-100 text-blue-800',
+  completed: 'bg-green-100 text-green-800',
+} as const;
+
+const priorityColors = {
+  low: 'bg-green-100 text-green-800',
+  medium: 'bg-yellow-100 text-yellow-800',
+  high: 'bg-red-100 text-red-800',
+} as const;
+
+interface TasksProps {
+  isDark?: boolean;
+}
+
+export function Tasks({ isDark = false }: TasksProps) {
   const queryClient = useQueryClient();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
-  const [newTask, setNewTask] = useState({
+  const [newTask, setNewTask] = useState<{
+    title: string;
+    description: string;
+    project_id: string;
+    status: 'todo' | 'in_progress' | 'completed';
+    priority: 'low' | 'medium' | 'high';
+    due_date: string;
+  }>({
     title: '',
     description: '',
     project_id: '',
-    priority: 'medium',
+    status: 'todo',
+    priority: 'low',
     due_date: '',
   });
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
@@ -39,6 +60,8 @@ export function Tasks() {
   const [deleteTask, setDeleteTask] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
 
   const { data: projectsData, isLoading: isLoadingProjects } = useQuery({
     queryKey: ['projects'],
@@ -71,7 +94,8 @@ export function Tasks() {
         title: '',
         description: '',
         project_id: '',
-        priority: 'medium',
+        status: 'todo',
+        priority: 'low',
         due_date: '',
       });
     },
@@ -87,7 +111,8 @@ export function Tasks() {
         title: '',
         description: '',
         project_id: '',
-        priority: 'medium',
+        status: 'todo',
+        priority: 'low',
         due_date: '',
       });
     },
@@ -113,15 +138,20 @@ export function Tasks() {
     },
   });
 
-  const handleCreateOrEditTask = (e: React.FormEvent) => {
+  const handleCreateOrEditTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editTask) {
-      updateTask.mutate({
-        ...newTask,
-        project_id: selectedProjectId,
-      });
-    } else {
-      createTask.mutate(newTask);
+    setUpdateLoading(true);
+    try {
+      if (editTask) {
+        await updateTask.mutateAsync({
+          ...newTask,
+          project_id: selectedProjectId,
+        });
+      } else {
+        await createTask.mutateAsync(newTask);
+      }
+    } finally {
+      setUpdateLoading(false);
     }
   };
 
@@ -152,6 +182,7 @@ export function Tasks() {
       title: task.title,
       description: task.description || '',
       project_id: task.project_id,
+      status: task.status,
       priority: task.priority,
       due_date: task.due_date ? task.due_date.split('T')[0] : '',
     });
@@ -181,9 +212,9 @@ export function Tasks() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className={`p-6 max-w-7xl mx-auto ${isDark ? 'text-white' : ''}`}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Tasks</h1>
+        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>Tasks</h1>
         <Button 
           onClick={() => setIsCreateModalOpen(true)}
           disabled={!selectedProjectId}
@@ -196,17 +227,21 @@ export function Tasks() {
 
       {/* Project Selection */}
       <div className="mb-6">
-        <label htmlFor="project-select" className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+        <label htmlFor="project-select" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Project</label>
         <Select
           value={selectedProjectId}
           onValueChange={setSelectedProjectId}
         >
-          <SelectTrigger id="project-select" className="w-[300px]">
+          <SelectTrigger id="project-select" className={`w-[300px] ${isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}`}>
             <SelectValue placeholder="Select a project" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
             {projectsData?.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
+              <SelectItem 
+                key={project.id} 
+                value={project.id}
+                className={isDark ? 'text-white hover:bg-gray-700' : ''}
+              >
                 {project.name}
               </SelectItem>
             ))}
@@ -219,84 +254,62 @@ export function Tasks() {
         isLoadingTasks ? (
           <div className="p-8 text-center">Loading tasks...</div>
         ) : tasksData?.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className={`p-8 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             No tasks found for this project. Create your first task to get started.
           </div>
         ) : (
-          <div className="bg-white rounded-lg border overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Task
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Priority
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Due Date
-                  </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tasksData?.map((task: Task) => (
-                  <tr key={task.id}>
-                    <td className="px-6 py-6 whitespace-nowrap align-top">
-                      <div className="text-sm font-medium text-gray-900">{task.title}</div>
-                      {task.description && (
-                        <div className="text-sm text-gray-500 max-w-[300px] whitespace-normal break-words mt-1">{task.description}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Select
-                        value={task.status}
-                        onValueChange={(value) => handleStatusChange(task.id, value)}
-                      >
-                        <SelectTrigger className="w-[130px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todo">To Do</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
-                          task.priority === 'high'
-                            ? 'bg-red-100 text-red-800'
-                            : task.priority === 'medium'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {task.due_date ? (
-                        <div className="flex items-center gap-2">
-                          {new Date(task.due_date).toLocaleDateString()}
-                          {isTaskOverdue(task) && (
-                            <Badge variant="secondary" className="bg-red-100 text-red-800">
-                              Task Due
-                            </Badge>
-                          )}
+          <div className={`${isDark ? 'bg-gray-900/40 backdrop-blur-sm' : 'bg-white'} rounded-lg border ${isDark ? 'border-gray-700' : ''}`}>
+            <div className={`p-4 border-b ${isDark ? 'border-gray-700' : ''}`}>
+              <div className="flex items-center gap-2">
+                <CheckSquare className="text-brand-blue" />
+                <h2 className={`font-semibold ${isDark ? 'text-white' : ''}`}>Project Tasks</h2>
+              </div>
+            </div>
+            <div className="p-4">
+              {tasksData?.map((task: Task) => (
+                <div 
+                  key={task.id} 
+                  className={`mb-4 p-4 rounded-lg border ${
+                    isDark 
+                      ? 'border-gray-700 bg-gray-800/50 hover:bg-gray-800' 
+                      : 'border-gray-200 bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className={`text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                        {task.title}
+                      </h3>
+                      <p className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+                        {task.description}
+                      </p>
+                      <div className="mt-2 flex items-center gap-4">
+                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          <span className="font-medium">Due:</span>{' '}
+                          {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date'}
                         </div>
-                      ) : 'No due date'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium gap-2">
+                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          <span className="font-medium">Status:</span>{' '}
+                          <Badge variant="secondary" className={statusColors[task.status as keyof typeof statusColors] || "bg-gray-100 text-gray-800"}>
+                            {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
+                          </Badge>
+                        </div>
+                        <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                          <span className="font-medium">Priority:</span>{' '}
+                          <Badge variant="secondary" className={priorityColors[task.priority as keyof typeof priorityColors] || "bg-gray-100 text-gray-800"}>
+                            {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-gray-100 inline-flex"
+                        className={`p-1 rounded-full inline-flex ${
+                          isDark 
+                            ? 'text-gray-400 hover:text-indigo-400 hover:bg-gray-700' 
+                            : 'text-gray-500 hover:text-indigo-600 hover:bg-gray-100'
+                        }`}
                         onClick={() => openEditModal(task)}
                         title="Edit task"
                       >
@@ -304,17 +317,21 @@ export function Tasks() {
                       </button>
                       <button
                         type="button"
-                        className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-gray-100 inline-flex"
+                        className={`p-1 rounded-full inline-flex ${
+                          isDark 
+                            ? 'text-gray-400 hover:text-red-400 hover:bg-gray-700' 
+                            : 'text-gray-500 hover:text-red-600 hover:bg-gray-100'
+                        }`}
                         onClick={() => handleDeleteClick(task)}
                         title="Delete task"
                       >
                         <Trash2 size={16} />
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )
       ) : (
@@ -332,14 +349,16 @@ export function Tasks() {
               onClick={() => { setIsCreateModalOpen(false); setEditTask(null); }}
             />
 
-            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
+            <div className={`inline-block transform overflow-hidden rounded-lg ${isDark ? 'bg-gray-900/90 backdrop-blur-sm' : 'bg-white'} px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle`}>
               <form onSubmit={handleCreateOrEditTask}>
                 <div>
-                  <h3 className="text-lg font-medium leading-6 text-gray-900">{editTask ? 'Edit Task' : 'Create New Task'}</h3>
+                  <h3 className={`text-lg font-medium leading-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {editTask ? 'Edit Task' : 'Create New Task'}
+                  </h3>
                   <div className="mt-4 space-y-4">
                     <div>
-                      <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                        Task Title
+                      <label htmlFor="title" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Title
                       </label>
                       <Input
                         type="text"
@@ -348,10 +367,11 @@ export function Tasks() {
                         required
                         value={newTask.title}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="description" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Description
                       </label>
                       <Textarea
@@ -360,29 +380,49 @@ export function Tasks() {
                         rows={3}
                         value={newTask.description}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div>
-                      <label htmlFor="priority" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="status" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Status
+                      </label>
+                      <Select
+                        name="status"
+                        value={newTask.status}
+                        onValueChange={(value) => setNewTask(prev => ({ ...prev, status: value as 'todo' | 'in_progress' | 'completed' }))}
+                      >
+                        <SelectTrigger className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+                          <SelectItem value="todo" className={isDark ? 'text-white hover:bg-gray-700' : ''}>To Do</SelectItem>
+                          <SelectItem value="in_progress" className={isDark ? 'text-white hover:bg-gray-700' : ''}>In Progress</SelectItem>
+                          <SelectItem value="completed" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label htmlFor="priority" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Priority
                       </label>
                       <Select
                         name="priority"
                         value={newTask.priority}
-                        onValueChange={(value) => setNewTask(prev => ({ ...prev, priority: value }))}
+                        onValueChange={(value) => setNewTask(prev => ({ ...prev, priority: value as 'low' | 'medium' | 'high' }))}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Low</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
+                        <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+                          <SelectItem value="low" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Low</SelectItem>
+                          <SelectItem value="medium" className={isDark ? 'text-white hover:bg-gray-700' : ''}>Medium</SelectItem>
+                          <SelectItem value="high" className={isDark ? 'text-white hover:bg-gray-700' : ''}>High</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <label htmlFor="due_date" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="due_date" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Due Date
                       </label>
                       <Input
@@ -391,24 +431,23 @@ export function Tasks() {
                         id="due_date"
                         value={newTask.due_date}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                   </div>
                 </div>
                 <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                  <button
-                    type="submit"
-                    className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm"
-                  >
-                    {editTask ? 'Save Changes' : 'Create'}
-                  </button>
-                  <button
+                  <Button type="submit" className="sm:col-start-2" disabled={updateLoading}>
+                    {editTask ? (updateLoading ? 'Saving...' : 'Save Changes') : 'Create'}
+                  </Button>
+                  <Button
                     type="button"
-                    className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-1 sm:mt-0 sm:text-sm"
+                    variant="outline"
+                    className={`mt-3 sm:col-start-1 sm:mt-0 ${isDark ? 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700' : ''}`}
                     onClick={() => { setIsCreateModalOpen(false); setEditTask(null); }}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -418,42 +457,21 @@ export function Tasks() {
 
       {/* Delete Task Modal */}
       {deleteTask && (
-        <div className="fixed inset-0 z-20 overflow-y-auto">
-          <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              onClick={handleCloseDeleteModal}
-            />
-            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
-              <div>
-                <h3 className="text-lg font-medium leading-6 text-gray-900">Delete Task</h3>
-                <div className="mt-2 text-gray-700">
-                  Are you sure you want to delete the task "{deleteTask.title}"? This action cannot be undone.
-                </div>
-                {deleteError && (
-                  <div className="mt-4 text-red-600 text-sm border border-red-200 rounded p-2 bg-red-50">
-                    {deleteError}
-                  </div>
-                )}
-              </div>
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                <button
-                  type="button"
-                  className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-1 sm:mt-0 sm:text-sm"
-                  onClick={handleCloseDeleteModal}
-                  disabled={isDeleting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm"
-                  onClick={handleDeleteConfirm}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className={`rounded-lg shadow-lg p-6 max-w-sm w-full ${isDark ? 'bg-gray-900 text-white' : 'bg-white'}`}>
+            <h2 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : ''}`}>Delete Task</h2>
+            <p className={`mb-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Are you sure you want to delete this task? This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={handleDeleteConfirm} className="w-full" variant="destructive">Delete</Button>
+              <Button 
+                onClick={handleCloseDeleteModal} 
+                className={`w-full ${isDark ? 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700' : ''}`} 
+                variant="outline"
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </div>

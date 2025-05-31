@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import DecryptedText from '@/components/DecryptedText';
 import Iridescence from '@/components/BackgroundAnimation';
+import LiquidChrome from '@/components/LiquidChrome';
 
 interface NavItem {
   name: string;
@@ -75,13 +76,32 @@ const getInitials = (name?: string) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
+interface DashboardChildProps {
+  isDark?: boolean;
+}
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [isIridescent, setIsIridescent] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const menuRef = React.useRef<HTMLDivElement>(null);
+
+  // Wrap children with dark mode context
+  const wrappedChildren = React.useMemo(() => {
+    const childrenArray = React.Children.toArray(children);
+    return React.Children.map(childrenArray, child => {
+      if (React.isValidElement<DashboardChildProps>(child)) {
+        return React.cloneElement(child, {
+          isDark: !isIridescent,
+          ...child.props
+        });
+      }
+      return child;
+    });
+  }, [children, isIridescent]);
 
   const handleLogout = async () => {
     await logout();
@@ -106,14 +126,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-100 relative">
       <div className="absolute inset-0 z-0">
-        <Iridescence
-          color={[1, 1, 1]}
-          mouseReact={false}
-          amplitude={0.1}
-          speed={1.0}
-        />
+        {isIridescent ? (
+          <Iridescence
+            color={[1, 1, 1]}
+            mouseReact={false}
+            amplitude={0.1}
+            speed={1.0}
+          />
+        ) : (
+          <LiquidChrome 
+            baseColor={[0.1, 0.1, 0.1]}
+            speed={0.2}
+            amplitude={0.5}
+            interactive={false}
+          />
+        )}
       </div>
-      <div className="relative z-10">
+      <div className={`relative z-10 ${!isIridescent ? 'text-white' : 'text-gray-800'}`}>
         {/* Mobile sidebar */}
         <div
           className={`fixed inset-0 z-40 flex md:hidden ${
@@ -128,15 +157,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           />
 
           <div
-            className={`relative flex w-full max-w-xs flex-1 flex-col bg-white/50 backdrop-blur-sm transition-transform ${
+            className={`relative flex w-full max-w-xs flex-1 flex-col ${isIridescent ? 'bg-white/50' : 'bg-gray-800/50'} backdrop-blur-sm transition-transform ${
               sidebarOpen ? 'translate-x-0' : '-translate-x-full'
             }`}
           >
             <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200/50">
-              <div className="text-xl font-semibold text-gray-800">Work Vault</div>
+              <div className={`text-xl font-semibold ${!isIridescent ? 'text-white' : 'text-gray-800'}`}>Work Vault</div>
               <button
                 type="button"
-                className="text-gray-500 hover:text-gray-600"
+                className={`${!isIridescent ? 'text-gray-300 hover:text-white' : 'text-gray-500 hover:text-gray-600'}`}
                 onClick={() => setSidebarOpen(false)}
               >
                 <span className="sr-only">Close sidebar</span>
@@ -153,13 +182,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   to={item.path}
                   className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                     location.pathname === item.path
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? !isIridescent 
+                        ? 'bg-gray-900 text-white' 
+                        : 'bg-gray-100 text-gray-900'
+                      : !isIridescent
+                        ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
                   <div
                     className={`mr-3 h-6 w-6 ${
-                      location.pathname === item.path ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500'
+                      location.pathname === item.path 
+                        ? !isIridescent ? 'text-white' : 'text-gray-500'
+                        : !isIridescent ? 'text-gray-400 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-500'
                     }`}
                   >
                     {item.icon}
@@ -173,14 +208,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         {/* Static sidebar for desktop */}
         <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
-          <div className="flex min-h-0 flex-1 flex-col border-r border-gray-200/50 bg-white/50 backdrop-blur-sm">
+          <div className={`flex min-h-0 flex-1 flex-col border-r border-gray-200/50 ${isIridescent ? 'bg-white/50' : 'bg-gray-800/50'} backdrop-blur-sm`}>
             <div className="flex h-16 items-center px-4 border-b border-gray-200/50">
-              <div className="text-xl font-semibold text-gray-800">
+              <div className={`text-xl font-semibold ${!isIridescent ? 'text-white' : 'text-gray-800'}`}>
                 <DecryptedText
-                      text="Work Vault"
-                      animateOn="view"
-                      revealDirection="center"
-                    />
+                  text="Work Vault"
+                  animateOn="view"
+                  revealDirection="center"
+                />
               </div>
             </div>
             <nav className="flex-1 space-y-1 px-2 py-4">
@@ -190,13 +225,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   to={item.path}
                   className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                     location.pathname === item.path
-                      ? 'bg-gray-900/10 text-gray-900'
-                      : 'text-gray-600 hover:bg-gray-900/5 hover:text-gray-900'
+                      ? !isIridescent 
+                        ? 'bg-gray-900/50 text-white' 
+                        : 'bg-gray-900/10 text-gray-900'
+                      : !isIridescent
+                        ? 'text-gray-300 hover:bg-gray-900/30 hover:text-white'
+                        : 'text-gray-600 hover:bg-gray-900/5 hover:text-gray-900'
                   }`}
                 >
                   <div
                     className={`mr-3 h-6 w-6 ${
-                      location.pathname === item.path ? 'text-gray-700' : 'text-gray-400 group-hover:text-gray-600'
+                      location.pathname === item.path 
+                        ? !isIridescent ? 'text-white' : 'text-gray-700'
+                        : !isIridescent ? 'text-gray-400 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-600'
                     }`}
                   >
                     {item.icon}
@@ -206,17 +247,21 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               ))}
             </nav>
             <div className="flex items-center justify-center border-t border-gray-200/50">
-              <div className="h-10 text-gray-600">Support the <a href="https://rananjaysingh20.github.io/" target="_blank" className="text-brand-blue hover:text-brand-blue/80 transition-colors">developer</a></div>
+              <div className={`h-10 ${!isIridescent ? 'text-gray-300' : 'text-gray-600'}`}>
+                Support the <a href="https://rananjaysingh20.github.io/" target="_blank" className="text-brand-blue hover:text-brand-blue/80 transition-colors">developer</a>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Main content */}
         <div className="flex flex-1 flex-col md:pl-64">
-          <div className="sticky top-0 z-10 bg-white/50 backdrop-blur-sm pl-1 pt-1 sm:pl-3 sm:pt-3 md:hidden">
+          <div className={`sticky top-0 z-10 ${isIridescent ? 'bg-white/50' : 'bg-gray-800/50'} backdrop-blur-sm pl-1 pt-1 sm:pl-3 sm:pt-3 md:hidden`}>
             <button
               type="button"
-              className="-ml-0.5 -mt-0.5 inline-flex h-12 w-12 items-center justify-center rounded-md text-gray-500 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+              className={`-ml-0.5 -mt-0.5 inline-flex h-12 w-12 items-center justify-center rounded-md ${
+                !isIridescent ? 'text-gray-300 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+              } focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500`}
               onClick={() => setSidebarOpen(true)}
             >
               <span className="sr-only">Open sidebar</span>
@@ -230,7 +275,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <div className="py-6">
               <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 min-w-0">
                 {/* User profile dropdown */}
-                <div className="flex justify-end mb-4">
+                <div className="flex justify-end mb-4 items-center gap-4">
+                  {/* Theme toggle button */}
+                  <button
+                    onClick={() => setIsIridescent(!isIridescent)}
+                    className={`px-3 py-1.5 rounded-lg ${
+                      isIridescent 
+                        ? 'bg-white/50 border-gray-200/50 text-gray-700 hover:bg-white/60' 
+                        : 'bg-gray-800/50 border-gray-600/50 text-white hover:bg-gray-800/60'
+                    } backdrop-blur-sm border text-sm font-medium transition-colors`}
+                  >
+                    {isIridescent ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+                  </button>
+                  
                   <div className="relative" ref={menuRef}>
                     <button
                       type="button"
@@ -238,16 +295,22 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                       onClick={() => setShowMenu((v) => !v)}
                     >
                       <span className="sr-only">Open user menu</span>
-                      <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <div className={`h-8 w-8 rounded-full ${isIridescent ? 'bg-gray-200' : 'bg-gray-700'} flex items-center justify-center ${!isIridescent ? 'text-white' : ''}`}>
                         {getInitials(user?.full_name)}
                       </div>
                     </button>
                     {showMenu && (
-                      <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                      <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg ${
+                        isIridescent ? 'bg-white' : 'bg-gray-800'
+                      } ring-1 ring-black ring-opacity-5 z-10`}>
                         <div className="py-1">
                           <button
                             onClick={handleLogout}
-                            className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+                            className={`block w-full px-4 py-2 text-left text-sm ${
+                              !isIridescent 
+                                ? 'text-gray-300 hover:bg-gray-700 hover:text-white' 
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
                           >
                             Sign out
                           </button>
@@ -259,7 +322,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
                 {/* Page content wrapper */}
                 <div className="overflow-x-auto">
-                  {children}
+                  {wrappedChildren}
                 </div>
               </div>
             </div>

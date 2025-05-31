@@ -23,7 +23,11 @@ interface TimeEntry {
   end_time?: string;
 }
 
-export function TimeEntries() {
+interface TimeEntriesProps {
+  isDark?: boolean;
+}
+
+export function TimeEntries({ isDark = false }: TimeEntriesProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -247,30 +251,31 @@ export function TimeEntries() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className={`p-6 max-w-7xl mx-auto ${isDark ? 'text-white' : ''}`}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Time Entries</h1>
+        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-800'}`}>Time Entries</h1>
         <Button 
           onClick={() => setIsCreateModalOpen(true)}
           disabled={!selectedTaskId}
           className="bg-brand-blue hover:bg-brand-blue/90 flex items-center gap-2"
         >
-            <Plus size={16} />
+          <Plus size={16} />
           New Time Entry
-          </Button>
+        </Button>
       </div>
 
       {/* Project and Task Selection */}
       <div className="mb-6 flex gap-4">
         <div className="flex flex-col">
-          <label htmlFor="project-select" className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+          <label htmlFor="project-select" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Project</label>
           <Select value={selectedProjectId} onValueChange={handleProjectChange}>
-            <SelectTrigger id="project-select" className="w-[300px]">
+            <SelectTrigger id="project-select" className={`w-[300px] ${isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}`}>
               <SelectValue placeholder="Select a project" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+              <SelectItem value="all" className={isDark ? 'text-white hover:bg-gray-700' : ''}>All Projects</SelectItem>
               {projectsData?.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
+                <SelectItem key={project.id} value={project.id} className={isDark ? 'text-white hover:bg-gray-700' : ''}>
                   {project.name}
                 </SelectItem>
               ))}
@@ -280,14 +285,15 @@ export function TimeEntries() {
 
         {selectedProjectId && (
           <div className="flex flex-col">
-            <label htmlFor="task-select" className="block text-sm font-medium text-gray-700 mb-1">Task</label>
+            <label htmlFor="task-select" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>Task</label>
             <Select value={selectedTaskId} onValueChange={handleTaskChange}>
-              <SelectTrigger id="task-select" className="w-[300px]">
+              <SelectTrigger id="task-select" className={`w-[300px] ${isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}`}>
                 <SelectValue placeholder="Select a task" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+                <SelectItem value="all" className={isDark ? 'text-white hover:bg-gray-700' : ''}>All Tasks</SelectItem>
                 {tasksData?.map((task) => (
-                  <SelectItem key={task.id} value={task.id}>
+                  <SelectItem key={task.id} value={task.id} className={isDark ? 'text-white hover:bg-gray-700' : ''}>
                     {task.title}
                   </SelectItem>
                 ))}
@@ -302,108 +308,115 @@ export function TimeEntries() {
         isLoadingTimeEntries ? (
           <div className="p-8 text-center">Loading time entries...</div>
         ) : timeEntriesData?.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className={`p-8 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             No time entries found for this task. Create your first time entry to get started.
           </div>
         ) : (
-          <div className="bg-white rounded-lg border overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (hours)</th>
-                  <th className="relative px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Files</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {timeEntriesData?.map((entry: TimeEntry) => (
-                  <tr key={entry.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {entry.start_time
-                        ? new Date(entry.start_time).toLocaleDateString()
-                        : (entry.date ? new Date(entry.date).toLocaleDateString() : '')}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {entry.description}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {entry.duration.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2 justify-end items-center">
-                      {/* File upload icon and input */}
-          <div className="flex items-center gap-2">
-                        <label className="cursor-pointer">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={e => handleFileChange(entry.id, e.target.files?.[0] || null)}
-                            disabled={uploading[entry.id]}
-                          />
-                          <Paperclip size={16} className="text-blue-600 hover:text-blue-800" />
-                        </label>
-                        {fileInputs[entry.id] && (
-                          <>
-                            <span className="text-xs text-gray-700 max-w-[120px] truncate inline-block align-middle">{fileInputs[entry.id]?.name}</span>
-                            <button
-                              type="button"
-                              className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-gray-100 inline-flex"
-                              onClick={() => handleFileUpload(entry.id)}
-                              disabled={uploading[entry.id]}
-                            >
-                              {uploading[entry.id] ? <Upload size={16} className="animate-spin" /> : <Upload size={16} />}
-                            </button>
-                          </>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-gray-100 inline-flex"
-                        onClick={() => openEditModal(entry)}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-gray-100 inline-flex"
-                        onClick={() => handleDeleteClick(entry)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <ul className="space-y-1">
-                        {(timeEntryFilesData[entry.id] || []).map((file: any) => {
-                          const fileUrl = file.file_url;
-                          return (
-                            <li key={file.id} className="flex items-center gap-2">
-                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                                {file.file_name}
-                              </a>
-                              <button
-                                className="text-red-600 hover:text-red-800"
-                                onClick={() => handleFileDelete(entry.id, file.id)}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </td>
+          <div className={`${isDark ? 'bg-gray-900/40 backdrop-blur-sm' : 'bg-white'} rounded-lg border ${isDark ? 'border-gray-700' : ''}`}>
+            <div className={`p-4 border-b ${isDark ? 'border-gray-700' : ''}`}>
+              <div className="flex items-center gap-2">
+                <Clock className="text-brand-blue" />
+                <h2 className={`font-semibold ${isDark ? 'text-white' : ''}`}>Time Entries</h2>
+              </div>
+            </div>
+            <div className="p-4">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration (hours)</th>
+                    <th className="relative px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Files</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {timeEntriesData?.map((entry: TimeEntry) => (
+                    <tr key={entry.id} className={`${isDark ? 'bg-gray-800/50 hover:bg-gray-800' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {entry.start_time
+                          ? new Date(entry.start_time).toLocaleDateString()
+                          : (entry.date ? new Date(entry.date).toLocaleDateString() : '')}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {entry.description}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {entry.duration.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2 justify-end items-center">
+                        <div className="flex items-center gap-2">
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={e => handleFileChange(entry.id, e.target.files?.[0] || null)}
+                              disabled={uploading[entry.id]}
+                            />
+                            <Paperclip size={16} className={`text-blue-600 hover:text-blue-800 ${isDark ? 'text-gray-400' : ''}`} />
+                          </label>
+                          {fileInputs[entry.id] && (
+                            <>
+                              <span className="text-xs text-gray-700 max-w-[120px] truncate inline-block align-middle">{fileInputs[entry.id]?.name}</span>
+                              <button
+                                type="button"
+                                className={`text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-gray-100 ${isDark ? 'text-gray-400 hover:bg-gray-700' : ''}`}
+                                onClick={() => handleFileUpload(entry.id)}
+                                disabled={uploading[entry.id]}
+                              >
+                                {uploading[entry.id] ? <Upload size={16} className="animate-spin" /> : <Upload size={16} />}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className={`text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-gray-100 ${isDark ? 'text-gray-400 hover:bg-gray-700' : ''}`}
+                          onClick={() => openEditModal(entry)}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          className={`text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-gray-100 ${isDark ? 'text-gray-400 hover:bg-gray-700' : ''}`}
+                          onClick={() => handleDeleteClick(entry)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <ul className="space-y-1">
+                          {(timeEntryFilesData[entry.id] || []).map((file: any) => {
+                            const fileUrl = file.file_url;
+                            return (
+                              <li key={file.id} className={`flex items-center gap-2 ${isDark ? 'text-gray-400' : ''}`}>
+                                <a href={fileUrl} target="_blank" rel="noopener noreferrer" className={`text-blue-600 underline ${isDark ? 'text-gray-400' : ''}`}>
+                                  {file.file_name}
+                                </a>
+                                <button
+                                  className={`text-red-600 hover:text-red-800 ${isDark ? 'text-gray-400 hover:bg-gray-700' : ''}`}
+                                  onClick={() => handleFileDelete(entry.id, file.id)}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )
       ) : (
-        <div className="p-8 text-center text-gray-500">
+        <div className={`p-8 text-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           Please select a project and task to view time entries
-            </div>
-          )}
+        </div>
+      )}
 
       {/* Create/Edit Time Entry Modal */}
       {isCreateModalOpen && (
@@ -413,13 +426,15 @@ export function TimeEntries() {
               className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
               onClick={() => { setIsCreateModalOpen(false); setEditEntry(null); }}
             />
-            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
+            <div className={`inline-block transform overflow-hidden rounded-lg ${isDark ? 'bg-gray-900/90 backdrop-blur-sm' : 'bg-white'} px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle`}>
               <form onSubmit={handleCreateOrEditTimeEntry}>
                 <div>
-                  <h3 className="text-lg font-medium leading-6 text-gray-900">{editEntry ? 'Edit Time Entry' : 'Create New Time Entry'}</h3>
+                  <h3 className={`text-lg font-medium leading-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {editEntry ? 'Edit Time Entry' : 'Create New Time Entry'}
+                  </h3>
                   <div className="mt-4 space-y-4">
                     <div>
-                      <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="description" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                         Description
                       </label>
                       <Textarea
@@ -428,11 +443,12 @@ export function TimeEntries() {
                         rows={3}
                         value={newTimeEntry.description}
                         onChange={handleInputChange}
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                     <div className="flex gap-2">
                       <div>
-                        <label htmlFor="startDate" className="block text-sm font-medium text-gray-700">Start Date</label>
+                        <label htmlFor="startDate" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Start Date</label>
                         <Input
                           type="date"
                           name="startDate"
@@ -440,10 +456,11 @@ export function TimeEntries() {
                           required
                           value={newTimeEntry.startDate}
                           onChange={handleInputChange}
+                          className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                         />
                       </div>
                       <div>
-                        <label htmlFor="startTime" className="block text-sm font-medium text-gray-700">Start Time</label>
+                        <label htmlFor="startTime" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Start Time</label>
                         <Input
                           type="time"
                           name="startTime"
@@ -451,12 +468,13 @@ export function TimeEntries() {
                           required
                           value={newTimeEntry.startTime}
                           onChange={handleInputChange}
+                          className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                         />
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <div>
-                        <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">End Date</label>
+                        <label htmlFor="endDate" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>End Date</label>
                         <Input
                           type="date"
                           name="endDate"
@@ -464,23 +482,25 @@ export function TimeEntries() {
                           required
                           value={newTimeEntry.endDate}
                           onChange={handleInputChange}
+                          className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                         />
-        </div>
+                      </div>
                       <div>
-                        <label htmlFor="endTime" className="block text-sm font-medium text-gray-700">End Time</label>
-                  <Input 
+                        <label htmlFor="endTime" className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>End Time</label>
+                        <Input
                           type="time"
                           name="endTime"
                           id="endTime"
                           required
                           value={newTimeEntry.endTime}
                           onChange={handleInputChange}
+                          className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                         />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Duration (hours)</label>
-                    <Input 
+                      <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Duration (hours)</label>
+                      <Input
                         type="number"
                         name="duration"
                         id="duration"
@@ -488,6 +508,7 @@ export function TimeEntries() {
                         min="0"
                         value={newTimeEntry.duration}
                         readOnly
+                        className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : ''}
                       />
                     </div>
                   </div>
@@ -495,13 +516,13 @@ export function TimeEntries() {
                 <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
                   <button
                     type="submit"
-                    className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm"
+                    className={`inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm ${isDark ? 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700' : ''}`}
                   >
                     {editEntry ? 'Save Changes' : 'Create'}
                   </button>
                   <button
                     type="button"
-                    className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-1 sm:mt-0 sm:text-sm"
+                    className={`mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-1 sm:mt-0 sm:text-sm ${isDark ? 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700' : ''}`}
                     onClick={() => { setIsCreateModalOpen(false); setEditEntry(null); }}
                   >
                     Cancel
@@ -515,45 +536,24 @@ export function TimeEntries() {
 
       {/* Delete Time Entry Modal */}
       {deleteEntry && (
-        <div className="fixed inset-0 z-20 overflow-y-auto">
-          <div className="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              onClick={handleCloseDeleteModal}
-            />
-            <div className="inline-block transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 sm:align-middle">
-              <div>
-                <h3 className="text-lg font-medium leading-6 text-gray-900">Delete Time Entry</h3>
-                <div className="mt-2 text-gray-700">
-                  Are you sure you want to delete this time entry? This action cannot be undone.
-                </div>
-                {deleteError && (
-                  <div className="mt-4 text-red-600 text-sm border border-red-200 rounded p-2 bg-red-50">
-                    {deleteError}
-                  </div>
-                )}
-              </div>
-              <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-                <button
-                  type="button"
-                  className="inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:col-start-1 sm:mt-0 sm:text-sm"
-                  onClick={handleCloseDeleteModal}
-                  disabled={isDeleting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:col-start-2 sm:text-sm"
-                  onClick={handleDeleteConfirm}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className={`rounded-lg shadow-lg p-6 max-w-sm w-full ${isDark ? 'bg-gray-900 text-white' : 'bg-white'}`}>
+            <h2 className={`text-lg font-semibold mb-2 ${isDark ? 'text-white' : ''}`}>Delete Time Entry</h2>
+            <p className={`mb-4 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              Are you sure you want to delete this time entry? This action cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <Button onClick={handleDeleteConfirm} className="w-full" variant="destructive">Delete</Button>
+              <Button 
+                onClick={handleCloseDeleteModal} 
+                className={`w-full ${isDark ? 'bg-gray-800 text-white border-gray-700 hover:bg-gray-700' : ''}`} 
+                variant="outline"
+              >
+                Cancel
+              </Button>
             </div>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Upload Error Modal */}

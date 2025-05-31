@@ -37,9 +37,10 @@ interface RecentActivityProps {
   projects: Project[];
   isLoading?: boolean;
   error?: Error | null;
+  isDark?: boolean;
 }
 
-const RecentActivity = ({ projects, isLoading = false, error = null }: RecentActivityProps) => {
+const RecentActivity = ({ projects, isLoading = false, error = null, isDark = false }: RecentActivityProps) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
 
   // Set the first project as default when projects are loaded
@@ -58,14 +59,14 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
 
   if (isLoading || isLoadingTasks) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Project Timeline</CardTitle>
+      <Card isDark={isDark}>
+        <CardHeader isDark={isDark}>
+          <CardTitle isDark={isDark}>Project Timeline</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent isDark={isDark}>
           <div className="h-[300px] w-full space-y-4">
-            <Skeleton className="w-full h-8" />
-            <Skeleton className="w-full h-[250px]" />
+            <Skeleton className={`w-full h-8 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`} />
+            <Skeleton className={`w-full h-[250px] ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`} />
           </div>
         </CardContent>
       </Card>
@@ -74,11 +75,11 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
 
   if (error) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Project Timeline</CardTitle>
+      <Card isDark={isDark}>
+        <CardHeader isDark={isDark}>
+          <CardTitle isDark={isDark}>Project Timeline</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent isDark={isDark}>
           <div className="h-[300px] w-full flex items-center justify-center text-red-500">
             Error loading project data
           </div>
@@ -91,12 +92,12 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
   
   if (!selectedProject) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Project Timeline</CardTitle>
+      <Card isDark={isDark}>
+        <CardHeader isDark={isDark}>
+          <CardTitle isDark={isDark}>Project Timeline</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full flex items-center justify-center text-gray-500">
+        <CardContent isDark={isDark}>
+          <div className={`h-[300px] w-full flex items-center justify-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             No project selected
           </div>
         </CardContent>
@@ -134,18 +135,22 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
 
   if (!tasksData?.length) {
     return (
-      <Card>
-        <CardHeader className="pb-2">
+      <Card isDark={isDark}>
+        <CardHeader isDark={isDark}>
           <div className="flex justify-between items-center">
-            <CardTitle className="text-lg">Project Timeline</CardTitle>
+            <CardTitle isDark={isDark}>Project Timeline</CardTitle>
             <div className="w-[250px]">
               <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                <SelectTrigger>
+                <SelectTrigger className={isDark ? 'bg-gray-800/50 border-gray-700 text-white' : 'bg-white border-gray-200'}>
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white'}>
                   {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
+                    <SelectItem 
+                      key={project.id} 
+                      value={project.id}
+                      className={isDark ? 'text-white hover:bg-gray-700' : ''}
+                    >
                       {project.name}
                     </SelectItem>
                   ))}
@@ -154,8 +159,8 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px] w-full flex items-center justify-center text-gray-500">
+        <CardContent isDark={isDark}>
+          <div className={`h-[300px] w-full flex items-center justify-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             No tasks found for this project
           </div>
         </CardContent>
@@ -181,18 +186,26 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
   }));
 
   return (
-    <Card className="border-none shadow-md bg-white/50 backdrop-blur-sm">
-      <CardHeader className="pb-2 border-b">
+    <Card isDark={isDark} className="shadow-md">
+      <CardHeader isDark={isDark} className="pb-2 border-b border-gray-200/20">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <CardTitle className="text-lg font-semibold text-gray-800">Project Timeline</CardTitle>
+          <CardTitle isDark={isDark} className="text-lg font-semibold">Project Timeline</CardTitle>
           <div className="w-full sm:w-[250px]">
             <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-              <SelectTrigger className="bg-white border-gray-200 hover:border-gray-300 transition-colors">
+              <SelectTrigger className={`transition-colors ${
+                isDark 
+                  ? 'bg-gray-800/50 border-gray-700 text-white hover:border-gray-600' 
+                  : 'bg-white border-gray-200 hover:border-gray-300'
+              }`}>
                 <SelectValue placeholder="Select a project" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className={isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white'}>
                 {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
+                  <SelectItem 
+                    key={project.id} 
+                    value={project.id}
+                    className={isDark ? 'text-white hover:bg-gray-700' : ''}
+                  >
                     {project.name}
                   </SelectItem>
                 ))}
@@ -201,7 +214,7 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent isDark={isDark}>
         <div className="h-[400px] w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -220,15 +233,18 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
                 strokeDasharray="3 3" 
                 horizontal={true}
                 vertical={false}
-                stroke="#e5e7eb"
+                stroke={isDark ? '#374151' : '#e5e7eb'}
               />
               <XAxis
                 type="number"
                 domain={[0, 'dataMax']}
                 tickFormatter={(value) => `Day ${value}`}
-                tick={{ fill: '#6b7280', fontSize: 12 }}
-                axisLine={{ stroke: '#e5e7eb' }}
-                tickLine={{ stroke: '#e5e7eb' }}
+                tick={{ 
+                  fill: isDark ? '#9CA3AF' : '#6B7280', 
+                  fontSize: 12 
+                }}
+                axisLine={{ stroke: isDark ? '#374151' : '#e5e7eb' }}
+                tickLine={{ stroke: isDark ? '#374151' : '#e5e7eb' }}
                 padding={{ left: 0, right: 10 }}
               />
               <YAxis
@@ -236,13 +252,12 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
                 dataKey="name"
                 width={100}
                 tick={{ 
-                  fill: '#374151', 
+                  fill: isDark ? '#F3F4F6' : '#374151', 
                   fontSize: 13, 
                   fontWeight: 500,
                   textAnchor: 'end'
                 }}
                 tickFormatter={(value) => {
-                  // Wrap long text to multiple lines
                   if (value.length > 20) {
                     return value.slice(0, 20) + '...';
                   }
@@ -252,13 +267,14 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
                 tickLine={false}
               />
               <Tooltip
-                cursor={{ fill: '#f3f4f6' }}
+                cursor={{ fill: isDark ? '#1F2937' : '#f3f4f6' }}
                 contentStyle={{
-                  backgroundColor: 'white',
+                  backgroundColor: isDark ? '#1F2937' : 'white',
                   border: 'none',
                   borderRadius: '8px',
                   padding: '12px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                  color: isDark ? '#F3F4F6' : 'inherit'
                 }}
                 formatter={(value: any, name: string, props: any) => {
                   if (name === 'duration') {
@@ -266,7 +282,7 @@ const RecentActivity = ({ projects, isLoading = false, error = null }: RecentAct
                     const endDay = startDay + value - 1;
                     return [
                       <div className="flex flex-col gap-1">
-                        <span className="text-sm text-gray-500">
+                        <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
                           Day {startDay} - Day {endDay} ({value} days)
                         </span>
                         <span className="text-sm font-medium" style={{ color: props.payload.fill }}>
